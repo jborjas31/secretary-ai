@@ -336,7 +336,7 @@ class SecretaryApp {
 
         this.elements.emptyState.style.display = 'none';
         
-        // Update meta info
+        // Update meta info (sanitized)
         if (this.currentSchedule.summary) {
             this.elements.scheduleMeta.textContent = this.currentSchedule.summary;
         }
@@ -363,6 +363,15 @@ class SecretaryApp {
     }
 
     /**
+     * Sanitize HTML to prevent XSS attacks
+     */
+    sanitizeHtml(str) {
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML;
+    }
+
+    /**
      * Render a single task item
      */
     renderTaskItem(task) {
@@ -370,14 +379,20 @@ class SecretaryApp {
         const priorityIndicator = task.priority === 'high' ? '🔴' : 
                                  task.priority === 'low' ? '🟡' : '🟠';
 
+        // Sanitize all user content to prevent XSS
+        const sanitizedTask = this.sanitizeHtml(task.task || '');
+        const sanitizedTime = this.sanitizeHtml(task.time || '');
+        const sanitizedDuration = this.sanitizeHtml(task.duration || '');
+        const sanitizedCategory = this.sanitizeHtml(task.category || 'task');
+
         return `
             <div class="task-item">
-                <div class="task-time">${task.time}</div>
+                <div class="task-time">${sanitizedTime}</div>
                 <div class="task-content">
-                    <div class="task-title">${priorityIndicator} ${task.task}</div>
+                    <div class="task-title">${priorityIndicator} ${sanitizedTask}</div>
                     <div class="task-details">
-                        Duration: ${task.duration}
-                        <span class="${categoryClass}">${task.category || 'task'}</span>
+                        Duration: ${sanitizedDuration}
+                        <span class="${categoryClass}">${sanitizedCategory}</span>
                     </div>
                 </div>
             </div>

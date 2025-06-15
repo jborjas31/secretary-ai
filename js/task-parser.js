@@ -204,7 +204,9 @@ class TaskParser {
      */
     async loadAndParseTasks() {
         try {
-            const response = await fetch('/tasks.md');
+            // Use dynamic base URL for GitHub Pages compatibility
+            const tasksUrl = window.Config ? window.Config.getResourceUrl('tasks.md') : './tasks.md';
+            const response = await fetch(tasksUrl);
             if (!response.ok) {
                 throw new Error(`Failed to load tasks.md: ${response.status}`);
             }

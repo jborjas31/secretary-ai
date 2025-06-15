@@ -1,16 +1,16 @@
-const CACHE_NAME = 'secretary-ai-v1';
+const CACHE_NAME = 'secretary-ai-v2'; // Updated version for new cache
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/css/style.css',
-    '/js/app.js',
-    '/js/config.js',
-    '/js/storage.js',
-    '/js/firestore.js',
-    '/js/task-parser.js',
-    '/js/llm-service.js',
-    '/tasks.md'
+    './',
+    './index.html',
+    './manifest.json',
+    './css/style.css',
+    './js/app.js',
+    './js/config.js',
+    './js/storage.js',
+    './js/firestore.js',
+    './js/task-parser.js',
+    './js/llm-service.js',
+    './tasks.md'
 ];
 
 // Install event - cache static assets

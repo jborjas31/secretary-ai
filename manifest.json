@@ -2,12 +2,12 @@
   "name": "Secretary AI - Daily Task Scheduler",
   "short_name": "Secretary AI",
   "description": "AI-powered chronological daily task scheduler that helps you stay organized",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2c3e50",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
       "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%232c3e50'/><text x='256' y='350' text-anchor='middle' font-size='300' fill='white'>📋</text></svg>",

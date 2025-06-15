@@ -4,15 +4,15 @@
  */
 
 // Firebase configuration
-// Replace with your actual Firebase config
 const FIREBASE_CONFIG = {
-    apiKey: "your-api-key-here",
-    authDomain: "your-project-id.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abcdef123456"
+  apiKey: "AIzaSyBJw_vR1LfN-izs6ghOM7e5ImbQy73KHpY",
+  authDomain: "secretary-ai-1bad7.firebaseapp.com",
+  projectId: "secretary-ai-1bad7",
+  storageBucket: "secretary-ai-1bad7.firebasestorage.app",
+  messagingSenderId: "662034359495",
+  appId: "1:662034359495:web:044ab6012f59f8645c8ae2"
 };
+
 
 // App configuration
 const APP_CONFIG = {
@@ -55,16 +55,15 @@ const APP_CONFIG = {
 
 // Development mode detection
 const isDevelopment = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1' ||
-                      window.location.hostname.includes('github.io');
+                      window.location.hostname === '127.0.0.1';
 
 // Environment-specific configuration
 const ENV_CONFIG = {
     development: {
         debug: true,
         logLevel: 'verbose',
-        enableFirestore: false, // Set to true when you have Firebase configured
-        mockData: true,
+        enableFirestore: true, // Enable Firestore for local testing
+        mockData: false, // Use real API calls in development too
     },
     production: {
         debug: false,
@@ -78,8 +77,33 @@ const ENV_CONFIG = {
 const currentEnv = isDevelopment ? 'development' : 'production';
 const ENVIRONMENT = ENV_CONFIG[currentEnv];
 
+// Base URL detection for GitHub Pages and other deployments
+const getBaseUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return '';
+    }
+    if (window.location.hostname.includes('github.io')) {
+        // For GitHub Pages: https://username.github.io/repository-name/
+        const pathParts = window.location.pathname.split('/').filter(part => part);
+        return pathParts.length > 0 ? `/${pathParts[0]}` : '';
+    }
+    return '';
+};
+
 // Utility functions
 const Config = {
+    // Get base URL for the application
+    getBaseUrl() {
+        return getBaseUrl();
+    },
+    
+    // Get full URL for a resource
+    getResourceUrl(path) {
+        const baseUrl = this.getBaseUrl();
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        return `${baseUrl}${cleanPath}`;
+    },
+    
     // Get Firebase config
     getFirebaseConfig() {
         return FIREBASE_CONFIG;
