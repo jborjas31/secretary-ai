@@ -155,24 +155,24 @@ const MOCK_DATA = {
             },
             {
                 time: "16:30",
-                task: "Prepare work lunch",
+                task: "Prepare work lunch for tomorrow",
                 duration: "30 minutes",
                 priority: "medium",
                 category: "routine"
             },
             {
                 time: "17:00",
-                task: "Check email",
+                task: "Check and respond to emails",
                 duration: "15 minutes",
                 priority: "medium",
-                category: "routine"
+                category: "work"
             },
             {
                 time: "17:30",
-                task: "Take medicines and supplements",
+                task: "Take medicines and supplements (2g Lysine)",
                 duration: "10 minutes",
                 priority: "high",
-                category: "routine"
+                category: "health"
             },
             {
                 time: "18:00",
@@ -183,7 +183,7 @@ const MOCK_DATA = {
             },
             {
                 time: "19:00",
-                task: "Plan tomorrow's activities",
+                task: "Plan tomorrow's activities and priorities",
                 duration: "30 minutes",
                 priority: "medium",
                 category: "personal"
@@ -193,10 +193,17 @@ const MOCK_DATA = {
                 task: "Apply topical minoxidil on scalp",
                 duration: "5 minutes",
                 priority: "medium",
-                category: "routine"
+                category: "health"
+            },
+            {
+                time: "21:30",
+                task: "Brush teeth and use nasal strips before sleep",
+                duration: "10 minutes",
+                priority: "high",
+                category: "health"
             }
         ],
-        summary: "Your schedule focuses on urgent tasks first, then routine activities. The evening is reserved for personal planning and health routines.",
+        summary: "Schedule prioritizes urgent tasks first (package pickup, SIM refill), followed by work and routine activities. Evening focuses on personal planning and health routines to prepare for tomorrow.",
         generatedAt: new Date().toISOString(),
         generatedFor: new Date().toLocaleDateString('en-US', { 
             weekday: 'long',

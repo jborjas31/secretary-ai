@@ -200,9 +200,12 @@ body {
     margin-top: 0.5rem;
 }
 
-.task-category.daily { background: #e8f5e8; color: #2e7d32; }
-.task-category.weekly { background: #fff3e0; color: #f57c00; }
+.task-category.work { background: #e3f2fd; color: #1976d2; }
+.task-category.personal { background: #f3e5f5; color: #7b1fa2; }
+.task-category.routine { background: #e8f5e8; color: #2e7d32; }
 .task-category.urgent { background: #ffebee; color: #c62828; }
+.task-category.health { background: #fff3e0; color: #f57c00; }
+.task-category.social { background: #e0f2f1; color: #00695c; }
 
 /* Empty state */
 .empty-state {

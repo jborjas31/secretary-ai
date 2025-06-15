@@ -8,6 +8,7 @@ class LLMService {
         this.apiKey = null;
         this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
         this.model = 'anthropic/claude-3.5-sonnet'; // Good balance of cost and capability
+        this.fallbackModels = ['openai/gpt-4o-mini', 'meta-llama/llama-3.1-8b-instruct:free']; // Cheaper alternatives
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second
     }
@@ -40,8 +41,8 @@ class LLMService {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': window.location.origin,
-                    'X-Title': 'Secretary AI'
+                    'HTTP-Referer': window.location.origin, // Required for OpenRouter app identification
+                    'X-Title': 'Secretary AI - Daily Task Scheduler' // App title for OpenRouter leaderboards
                 },
                 body: JSON.stringify(payload)
             });
@@ -111,50 +112,95 @@ class LLMService {
             return taskStr;
         }).join('\n');
 
-        const prompt = `You are an intelligent personal assistant helping create a chronological daily schedule.
+        const systemPrompt = `You are an intelligent personal assistant that creates practical, chronological daily schedules. You always respond with valid JSON following the exact schema provided.`;
+
+        const userPrompt = `Create a chronological daily schedule from the current time until end of day (around 22:00).
 
 Current Date and Time: ${dateStr}, ${timeStr}
 
 Available Tasks:
 ${taskList}
 
-Instructions:
-1. Create a chronological schedule from NOW (${timeStr}) until end of day (around 22:00)
-2. Assign realistic time slots for each task based on their nature and priority
-3. Consider logical sequencing (e.g., prepare lunch before eating, shower before going out)
-4. Include breaks and transition time between tasks
-5. Prioritize urgent/high-priority tasks earlier when possible
-6. For daily recurring tasks, schedule them at logical times throughout the remaining day
-7. If it's late in the day, focus on evening-appropriate tasks
+Schedule Guidelines:
+1. Start from NOW (${timeStr}) and schedule until 22:00
+2. Assign realistic time slots (15-60 minutes per task)
+3. Use logical sequencing (prepare lunch before eating, shower before going out)
+4. Prioritize urgent/high-priority tasks earlier
+5. Include brief transition time between tasks
+6. For daily recurring tasks, schedule at appropriate times
+7. If it's late, focus on evening-appropriate tasks
+8. Include a brief summary explaining the schedule logic
 
-Output format (JSON):
-{
-  "schedule": [
-    {
-      "time": "14:30",
-      "task": "Task description",
-      "duration": "30 minutes",
-      "priority": "high|medium|low",
-      "category": "work|personal|routine|urgent"
-    }
-  ],
-  "summary": "Brief overview of the schedule and reasoning"
-}
-
-Make the schedule practical and actionable for the remaining part of the day.`;
+The schedule should be practical and actionable for today.`;
 
         try {
             const payload = {
                 model: this.model,
+                models: [this.model, ...this.fallbackModels], // Fallback models for reliability
                 messages: [
                     {
+                        role: 'system',
+                        content: systemPrompt
+                    },
+                    {
                         role: 'user',
-                        content: prompt
+                        content: userPrompt
                     }
                 ],
                 temperature: 0.3,
                 max_tokens: 2000,
-                response_format: { type: 'json_object' }
+                response_format: {
+                    type: 'json_schema',
+                    json_schema: {
+                        name: 'daily_schedule',
+                        strict: true,
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                schedule: {
+                                    type: 'array',
+                                    description: 'Array of scheduled tasks for the day',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            time: {
+                                                type: 'string',
+                                                description: 'Time in HH:MM format (24-hour)',
+                                                pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+                                            },
+                                            task: {
+                                                type: 'string',
+                                                description: 'Brief description of the task'
+                                            },
+                                            duration: {
+                                                type: 'string',
+                                                description: 'Estimated duration (e.g., "30 minutes", "1 hour")'
+                                            },
+                                            priority: {
+                                                type: 'string',
+                                                enum: ['high', 'medium', 'low'],
+                                                description: 'Task priority level'
+                                            },
+                                            category: {
+                                                type: 'string',
+                                                enum: ['work', 'personal', 'routine', 'urgent', 'health', 'social'],
+                                                description: 'Task category'
+                                            }
+                                        },
+                                        required: ['time', 'task', 'duration', 'priority', 'category'],
+                                        additionalProperties: false
+                                    }
+                                },
+                                summary: {
+                                    type: 'string',
+                                    description: 'Brief explanation of the schedule logic and priorities'
+                                }
+                            },
+                            required: ['schedule', 'summary'],
+                            additionalProperties: false
+                        }
+                    }
+                }
             };
 
             const response = await this.makeRequest(payload);
@@ -269,34 +315,64 @@ Make the schedule practical and actionable for the remaining part of the day.`;
         }
 
         try {
-            const payload = {
-                model: this.model,
-                messages: [
-                    {
-                        role: 'user',
-                        content: 'Respond with just "OK" to confirm the connection is working.'
-                    }
-                ],
-                max_tokens: 10,
-                temperature: 0
-            };
+            // Use the auth endpoint to check key validity
+            const authResponse = await fetch('https://openrouter.ai/api/v1/auth/key', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'Secretary AI - Daily Task Scheduler'
+                }
+            });
 
-            const response = await this.makeRequest(payload);
-            
-            if (response.choices && response.choices[0] && response.choices[0].message) {
-                return {
-                    success: true,
-                    model: this.model,
-                    response: response.choices[0].message.content.trim()
-                };
-            } else {
-                throw new Error('Invalid response format');
+            if (!authResponse.ok) {
+                throw new Error(`Authentication failed: ${authResponse.status}`);
             }
+
+            const authData = await authResponse.json();
+            
+            return {
+                success: true,
+                keyInfo: authData.data,
+                creditsUsed: authData.data.usage,
+                creditsLimit: authData.data.limit,
+                isFreeTier: authData.data.is_free_tier
+            };
         } catch (error) {
             return {
                 success: false,
                 error: error.message
             };
+        }
+    }
+
+    /**
+     * Get available models from OpenRouter
+     */
+    async getAvailableModels() {
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/models', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'Secretary AI - Daily Task Scheduler'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch models: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.data.filter(model => 
+                // Filter for models that support structured outputs and are reasonably priced
+                model.supported_parameters?.includes('structured_outputs') &&
+                parseFloat(model.pricing.completion) < 0.01 // Less than $0.01 per token
+            );
+        } catch (error) {
+            console.error('Error fetching available models:', error);
+            return [];
         }
     }
 
