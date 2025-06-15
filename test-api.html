@@ -19,6 +19,12 @@
     <h1>OpenRouter API Test</h1>
     
     <div class="test-section">
+        <h3>Environment Info</h3>
+        <div id="envInfo" class="result"></div>
+        <button onclick="showEnvironmentInfo()">Show Environment Info</button>
+    </div>
+
+    <div class="test-section">
         <h3>1. Test API Key Validity</h3>
         <input type="password" id="apiKey" placeholder="Enter your OpenRouter API key">
         <br>
@@ -38,8 +44,33 @@
         <div id="scheduleResult" class="result"></div>
     </div>
 
+    <!-- Load config for environment detection -->
+    <script src="js/config.js"></script>
+
     <script>
         let apiKey = '';
+
+        function showEnvironmentInfo() {
+            const resultDiv = document.getElementById('envInfo');
+            const info = {
+                hostname: window.location.hostname,
+                pathname: window.location.pathname,
+                baseUrl: window.Config ? window.Config.getBaseUrl() : 'Config not loaded',
+                tasksUrl: window.Config ? window.Config.getResourceUrl('tasks.md') : 'Config not loaded',
+                isDevelopment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
+                isGitHubPages: window.location.hostname.includes('github.io'),
+                environment: 'Will be detected after config loads'
+            };
+
+            resultDiv.className = 'result';
+            resultDiv.textContent = `Environment Information:
+Hostname: ${info.hostname}
+Pathname: ${info.pathname}  
+Base URL: ${info.baseUrl}
+Tasks URL: ${info.tasksUrl}
+Is Development: ${info.isDevelopment}
+Is GitHub Pages: ${info.isGitHubPages}`;
+        }
 
         async function testApiKey() {
             apiKey = document.getElementById('apiKey').value.trim();
