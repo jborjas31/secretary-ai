@@ -1,0 +1,42 @@
+# Jekyll configuration for Secretary AI GitHub Pages deployment
+
+# Exclude OpenRouter documentation files from Jekyll processing
+exclude:
+  - openrouter/
+  - node_modules/
+  - package.json
+  - package-lock.json
+  - README.md
+  - .gitignore
+
+# Site settings
+title: Secretary AI
+description: AI-powered chronological daily task scheduler PWA
+url: "https://jborjas31.github.io"
+baseurl: "/secretary-ai"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Keep these files for the PWA
+keep_files:
+  - manifest.json
+  - sw.js
+  - css/
+  - js/
+  - index.html
+  - tasks.md
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
