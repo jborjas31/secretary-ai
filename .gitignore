@@ -12,6 +12,9 @@ npm-debug.log*
 # API keys (if stored in separate files)
 config/firebase-config.json
 config/api-keys.json
+openrouter_api_key.md
+.env
+.env.local
 
 # IDE files
 .vscode/
