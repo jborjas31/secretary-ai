@@ -7,8 +7,8 @@ class LLMService {
     constructor() {
         this.apiKey = null;
         this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-        this.model = 'anthropic/claude-3.5-sonnet'; // Good balance of cost and capability
-        this.fallbackModels = ['openai/gpt-4o-mini', 'meta-llama/llama-3.1-8b-instruct:free']; // Cheaper alternatives
+        this.model = 'meta-llama/llama-3.1-8b-instruct:free'; // Start with free model
+        this.fallbackModels = ['microsoft/phi-3-medium-128k-instruct:free', 'anthropic/claude-3.5-sonnet']; // Free first, then paid
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second
     }
@@ -112,7 +112,7 @@ class LLMService {
             return taskStr;
         }).join('\n');
 
-        const systemPrompt = `You are an intelligent personal assistant that creates practical, chronological daily schedules. You always respond with valid JSON following the exact schema provided.`;
+        const systemPrompt = `You are an intelligent personal assistant that creates practical, chronological daily schedules. You MUST respond with valid JSON only, no other text.`;
 
         const userPrompt = `Create a chronological daily schedule from the current time until end of day (around 22:00).
 
@@ -129,9 +129,23 @@ Schedule Guidelines:
 5. Include brief transition time between tasks
 6. For daily recurring tasks, schedule at appropriate times
 7. If it's late, focus on evening-appropriate tasks
-8. Include a brief summary explaining the schedule logic
 
-The schedule should be practical and actionable for today.`;
+IMPORTANT: Respond with ONLY valid JSON in this exact format:
+{
+  "schedule": [
+    {
+      "time": "14:30",
+      "task": "Task description",
+      "duration": "30 minutes", 
+      "priority": "high",
+      "category": "urgent"
+    }
+  ],
+  "summary": "Brief explanation of the schedule logic"
+}
+
+Use these categories: work, personal, routine, urgent, health, social
+Use these priorities: high, medium, low`;
 
         try {
             const payload = {
@@ -149,58 +163,7 @@ The schedule should be practical and actionable for today.`;
                 ],
                 temperature: 0.3,
                 max_tokens: 2000,
-                response_format: {
-                    type: 'json_schema',
-                    json_schema: {
-                        name: 'daily_schedule',
-                        strict: true,
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                schedule: {
-                                    type: 'array',
-                                    description: 'Array of scheduled tasks for the day',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            time: {
-                                                type: 'string',
-                                                description: 'Time in HH:MM format (24-hour)',
-                                                pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
-                                            },
-                                            task: {
-                                                type: 'string',
-                                                description: 'Brief description of the task'
-                                            },
-                                            duration: {
-                                                type: 'string',
-                                                description: 'Estimated duration (e.g., "30 minutes", "1 hour")'
-                                            },
-                                            priority: {
-                                                type: 'string',
-                                                enum: ['high', 'medium', 'low'],
-                                                description: 'Task priority level'
-                                            },
-                                            category: {
-                                                type: 'string',
-                                                enum: ['work', 'personal', 'routine', 'urgent', 'health', 'social'],
-                                                description: 'Task category'
-                                            }
-                                        },
-                                        required: ['time', 'task', 'duration', 'priority', 'category'],
-                                        additionalProperties: false
-                                    }
-                                },
-                                summary: {
-                                    type: 'string',
-                                    description: 'Brief explanation of the schedule logic and priorities'
-                                }
-                            },
-                            required: ['schedule', 'summary'],
-                            additionalProperties: false
-                        }
-                    }
-                }
+                response_format: { type: 'json_object' } // Simplified for better compatibility
             };
 
             const response = await this.makeRequest(payload);
