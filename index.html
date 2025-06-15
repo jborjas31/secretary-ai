@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secretary AI - Your Daily Schedule</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="description" content="AI-powered chronological daily task scheduler">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1 class="title">Secretary AI</h1>
+            <div class="current-time" id="currentTime"></div>
+            <button class="refresh-btn" id="refreshBtn" title="Refresh Schedule">🔄</button>
+        </header>
+
+        <main class="main">
+            <div class="status" id="status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText">Loading your schedule...</span>
+            </div>
+
+            <div class="schedule-container">
+                <div class="schedule-header">
+                    <h2>Your Schedule for Today</h2>
+                    <div class="schedule-meta" id="scheduleMeta"></div>
+                </div>
+                
+                <div class="task-list" id="taskList">
+                    <!-- Tasks will be dynamically inserted here -->
+                </div>
+
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <div class="empty-icon">✅</div>
+                    <h3>All done for today!</h3>
+                    <p>No more tasks scheduled for the rest of the day.</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <button class="settings-btn" id="settingsBtn">⚙️ Settings</button>
+                <div class="last-updated" id="lastUpdated"></div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="openrouterKey">OpenRouter API Key:</label>
+                    <input type="password" id="openrouterKey" placeholder="sk-or-...">
+                    <small>Required for AI schedule generation</small>
+                </div>
+                <div class="setting-group">
+                    <label for="refreshInterval">Auto Refresh (minutes):</label>
+                    <select id="refreshInterval">
+                        <option value="15">Every 15 minutes</option>
+                        <option value="30" selected>Every 30 minutes</option>
+                        <option value="60">Every hour</option>
+                        <option value="0">Manual only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="saveSettings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Generating your schedule...</div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/firestore.js"></script>
+    <script src="js/task-parser.js"></script>
+    <script src="js/llm-service.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

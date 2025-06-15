@@ -1,0 +1,33 @@
+{
+  "name": "Secretary AI - Daily Task Scheduler",
+  "short_name": "Secretary AI",
+  "description": "AI-powered chronological daily task scheduler that helps you stay organized",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2c3e50",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%232c3e50'/><text x='256' y='350' text-anchor='middle' font-size='300' fill='white'>📋</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%232c3e50'/><text x='96' y='130' text-anchor='middle' font-size='120' fill='white'>📋</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 144 144'><rect width='144' height='144' fill='%232c3e50'/><text x='72' y='100' text-anchor='middle' font-size='90' fill='white'>📋</text></svg>",
+      "sizes": "144x144",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false
+}
