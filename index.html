@@ -66,14 +66,14 @@
                 <div class="setting-group">
                     <label for="modelSelect">AI Model:</label>
                     <select id="modelSelect">
-                        <option value="meta-llama/llama-3.1-8b-instruct:free" selected>Llama 3.1 8B (Free)</option>
+                        <option value="anthropic/claude-3.5-sonnet" selected>Claude 3.5 Sonnet (Recommended - $3/1M tokens)</option>
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Cost-effective - $0.15/1M tokens)</option>
+                        <option value="openai/gpt-4o">GPT-4o (Premium - $2.50/1M tokens)</option>
+                        <option value="openrouter/auto">Auto Router (Smart selection - Variable cost)</option>
+                        <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
                         <option value="microsoft/phi-3-medium-128k-instruct:free">Phi-3 Medium (Free)</option>
-                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Paid - $0.15/1M tokens)</option>
-                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Paid - $3/1M tokens)</option>
-                        <option value="openai/gpt-4o">GPT-4o (Paid - $2.50/1M tokens)</option>
-                        <option value="openrouter/auto">Auto Router (Paid - Smart model selection)</option>
                     </select>
-                    <small>Free models work without credits. Paid models require credits in your OpenRouter account.</small>
+                    <small>With your $20 credits: Claude 3.5 Sonnet (~6,700 schedules), GPT-4o Mini (~133,000 schedules), or use free models without credits.</small>
                 </div>
                 <div class="setting-group">
                     <label for="refreshInterval">Auto Refresh (minutes):</label>

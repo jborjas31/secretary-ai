@@ -21,7 +21,7 @@ const APP_CONFIG = {
     
     // Default settings
     defaults: {
-        selectedModel: 'meta-llama/llama-3.1-8b-instruct:free',
+        selectedModel: 'anthropic/claude-3.5-sonnet',
         refreshInterval: 30, // minutes
         maxScheduleHours: 12, // hours to schedule ahead
         maxTasks: 20, // maximum tasks to include in schedule

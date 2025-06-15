@@ -128,7 +128,7 @@ class SecretaryApp {
             console.error('Error loading settings:', error);
             this.settings = {
                 openrouterApiKey: '',
-                selectedModel: 'meta-llama/llama-3.1-8b-instruct:free',
+                selectedModel: 'anthropic/claude-3.5-sonnet',
                 refreshInterval: 30,
                 notifications: true,
                 theme: 'light'
@@ -444,7 +444,7 @@ class SecretaryApp {
         // Populate current settings
         if (this.settings) {
             this.elements.openrouterKey.value = this.settings.openrouterApiKey || '';
-            this.elements.modelSelect.value = this.settings.selectedModel || 'meta-llama/llama-3.1-8b-instruct:free';
+            this.elements.modelSelect.value = this.settings.selectedModel || 'anthropic/claude-3.5-sonnet';
             this.elements.refreshInterval.value = this.settings.refreshInterval || 30;
         }
         
