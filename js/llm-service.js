@@ -85,6 +85,13 @@ class LLMService {
     }
 
     /**
+     * Set the model to use for generation
+     */
+    setModel(modelId) {
+        this.model = modelId;
+    }
+
+    /**
      * Generate a dynamic daily schedule based on tasks and current time
      */
     async generateDailySchedule(tasks, currentTime = new Date()) {

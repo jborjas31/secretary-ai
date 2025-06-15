@@ -64,6 +64,18 @@
                     <small>Required for AI schedule generation</small>
                 </div>
                 <div class="setting-group">
+                    <label for="modelSelect">AI Model:</label>
+                    <select id="modelSelect">
+                        <option value="meta-llama/llama-3.1-8b-instruct:free" selected>Llama 3.1 8B (Free)</option>
+                        <option value="microsoft/phi-3-medium-128k-instruct:free">Phi-3 Medium (Free)</option>
+                        <option value="openai/gpt-4o-mini">GPT-4o Mini (Paid - $0.15/1M tokens)</option>
+                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet (Paid - $3/1M tokens)</option>
+                        <option value="openai/gpt-4o">GPT-4o (Paid - $2.50/1M tokens)</option>
+                        <option value="openrouter/auto">Auto Router (Paid - Smart model selection)</option>
+                    </select>
+                    <small>Free models work without credits. Paid models require credits in your OpenRouter account.</small>
+                </div>
+                <div class="setting-group">
                     <label for="refreshInterval">Auto Refresh (minutes):</label>
                     <select id="refreshInterval">
                         <option value="15">Every 15 minutes</option>

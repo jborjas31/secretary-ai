@@ -78,6 +78,7 @@ class SecretaryApp {
             settingsModal: document.getElementById('settingsModal'),
             modalClose: document.getElementById('modalClose'),
             openrouterKey: document.getElementById('openrouterKey'),
+            modelSelect: document.getElementById('modelSelect'),
             refreshInterval: document.getElementById('refreshInterval'),
             saveSettings: document.getElementById('saveSettings'),
             loadingOverlay: document.getElementById('loadingOverlay')
@@ -109,6 +110,11 @@ class SecretaryApp {
         if (this.settings && this.settings.openrouterApiKey) {
             this.llmService.setApiKey(this.settings.openrouterApiKey);
         }
+        
+        // Set selected model
+        if (this.settings && this.settings.selectedModel) {
+            this.llmService.setModel(this.settings.selectedModel);
+        }
     }
 
     /**
@@ -122,6 +128,7 @@ class SecretaryApp {
             console.error('Error loading settings:', error);
             this.settings = {
                 openrouterApiKey: '',
+                selectedModel: 'meta-llama/llama-3.1-8b-instruct:free',
                 refreshInterval: 30,
                 notifications: true,
                 theme: 'light'
@@ -437,6 +444,7 @@ class SecretaryApp {
         // Populate current settings
         if (this.settings) {
             this.elements.openrouterKey.value = this.settings.openrouterApiKey || '';
+            this.elements.modelSelect.value = this.settings.selectedModel || 'meta-llama/llama-3.1-8b-instruct:free';
             this.elements.refreshInterval.value = this.settings.refreshInterval || 30;
         }
         
@@ -457,6 +465,7 @@ class SecretaryApp {
         try {
             const newSettings = {
                 openrouterApiKey: this.elements.openrouterKey.value.trim(),
+                selectedModel: this.elements.modelSelect.value,
                 refreshInterval: parseInt(this.elements.refreshInterval.value) || 30,
                 notifications: true,
                 theme: 'light'
@@ -468,6 +477,7 @@ class SecretaryApp {
 
             // Update LLM service
             this.llmService.setApiKey(newSettings.openrouterApiKey);
+            this.llmService.setModel(newSettings.selectedModel);
 
             // Update auto-refresh
             this.setupAutoRefresh();

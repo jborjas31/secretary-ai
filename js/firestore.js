@@ -238,6 +238,7 @@ class FirestoreService {
     getDefaultSettings() {
         return {
             openrouterApiKey: '',
+            selectedModel: 'meta-llama/llama-3.1-8b-instruct:free',
             refreshInterval: 30,
             notifications: true,
             theme: 'light'
