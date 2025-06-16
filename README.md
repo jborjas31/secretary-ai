@@ -19,10 +19,22 @@ A Progressive Web App that reads your tasks.md file and generates intelligent, c
 # Clone or download the repository
 cd secretary_ai
 
-# Serve the files locally (Python 3)
+# Install dependencies (optional, for http-server)
+npm install
+
+# Start development server (Python 3)
+npm run start
+# or
+npm run dev
+
+# Alternative: Node.js server with no cache
+npm run serve
+
+# Manual server options:
+# Python 3
 python3 -m http.server 8000
 
-# Or using Node.js
+# Node.js
 npx http-server -p 8000
 
 # Visit http://localhost:8000
@@ -36,11 +48,14 @@ npx http-server -p 8000
 4. Choose your refresh interval
 5. Save settings
 
-### 3. Set Up Firebase (Optional for Sync)
+### 3. Firebase Sync (Pre-configured)
+
+**Firebase is already configured** for cross-device sync. The app uses a single-user setup with open security rules.
+
+**To use your own Firebase project:**
 
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com/)
-2. Enable Firestore Database
-3. Set up security rules (for single-user, simple setup):
+2. Enable Firestore Database with these security rules:
 
 ```javascript
 rules_version = '2';
@@ -53,8 +68,8 @@ service cloud.firestore {
 }
 ```
 
-4. Get your Firebase config from Project Settings
-5. Update `js/config.js` with your Firebase configuration:
+3. Get your Firebase config from Project Settings
+4. Update `js/config.js` with your Firebase configuration:
 
 ```javascript
 const FIREBASE_CONFIG = {
@@ -92,9 +107,12 @@ git push -u origin main
 ## How It Works
 
 1. **Task Parsing**: Reads your `tasks.md` file and converts it to structured data
-2. **AI Scheduling**: Sends relevant tasks to OpenRouter's Claude API for intelligent scheduling
+2. **AI Scheduling**: Uses OpenRouter API with model fallback system:
+   - Primary: `anthropic/claude-3.5-sonnet` (best reasoning)
+   - Fallback: `openai/gpt-4o-mini` (cost-effective)
+   - Free tier: `meta-llama/llama-3.1-8b-instruct:free`
 3. **Dynamic Updates**: Shows only upcoming tasks, refreshes as time passes
-4. **Offline Support**: Caches schedules locally, works without internet
+4. **Offline Support**: Service worker caches schedules locally, works without internet
 5. **Cross-Device Sync**: Syncs data via Firestore when online
 
 ## File Structure
@@ -102,35 +120,65 @@ git push -u origin main
 ```
 secretary_ai/
 ├── index.html          # Main app interface
+├── test-api.html       # OpenRouter API testing and debugging tool
 ├── manifest.json       # PWA manifest
 ├── sw.js              # Service worker for offline support
 ├── tasks.md           # Your task file (existing)
+├── package.json       # npm scripts and dependencies
+├── _config.yml        # GitHub Pages Jekyll configuration
+├── CLAUDE.md          # Development instructions for Claude Code
 ├── css/
 │   └── style.css      # App styling
-└── js/
-    ├── app.js         # Main application controller
-    ├── config.js      # Configuration settings
-    ├── task-parser.js # Parse tasks.md into structured data
-    ├── llm-service.js # OpenRouter API integration
-    ├── firestore.js   # Firebase/Firestore service
-    └── storage.js     # Local/cloud storage coordination
+├── js/
+│   ├── app.js         # Main application controller
+│   ├── config.js      # Configuration settings
+│   ├── task-parser.js # Parse tasks.md into structured data
+│   ├── llm-service.js # OpenRouter API integration with fallbacks
+│   ├── firestore.js   # Firebase/Firestore service
+│   └── storage.js     # Local/cloud storage coordination
+└── openrouter/        # Comprehensive OpenRouter API documentation
+    ├── overview.md
+    ├── quickstart.md
+    ├── models.md
+    └── [12+ documentation files]
 ```
 
 ## Configuration Options
 
 Edit `js/config.js` to customize:
 
-- **Firebase**: Add your Firebase project configuration
-- **OpenRouter Model**: Change the AI model (default: Claude 3.5 Sonnet)
-- **Refresh Interval**: How often to regenerate schedules
-- **UI Settings**: Animation timing, colors, etc.
+- **Firebase**: Already configured, or add your own project configuration
+- **OpenRouter Models**: Primary model (`anthropic/claude-3.5-sonnet`) and fallback chain
+- **Refresh Interval**: How often to regenerate schedules (default: 30 minutes)
+- **UI Settings**: Animation timing, colors, toast duration
+- **Environment Detection**: Automatic localhost vs GitHub Pages path resolution
+- **Debug Settings**: Logging levels, mock data, Firestore enablement
 
-## Development Mode
+## Development Tools
 
+### npm Scripts
+```bash
+npm run start      # Start Python development server
+npm run dev        # Alias for start
+npm run serve      # Start Node.js server with no cache
+npm run test       # Test PWA functionality and validate JS
+npm run validate   # Validate all JavaScript syntax
+npm run deploy     # Show deployment instructions
+```
+
+### API Testing
+Use `test-api.html` for comprehensive API testing:
+- Environment detection and path resolution
+- OpenRouter API key validation
+- Simple model calls and schedule generation
+- Debug information and error details
+
+### Development Mode
 The app automatically detects development mode and:
-- Shows debug logs in console
-- Uses mock data if APIs aren't configured
-- Provides helpful error messages
+- Shows verbose debug logs in console
+- Enables all features including Firestore
+- Provides detailed environment information
+- Uses sophisticated GitHub Pages path detection
 
 ## Troubleshooting
 
@@ -140,11 +188,13 @@ The app automatically detects development mode and:
    - Ensure tasks.md is in the root directory
    - Check file permissions
    - Serve files via HTTP (not file://)
+   - Use `test-api.html` to check environment and path resolution
 
 2. **"OpenRouter API error"**
-   - Verify API key is correct
-   - Check your OpenRouter credits
-   - Try a different model
+   - Use `test-api.html` to validate your API key
+   - Check your OpenRouter credits and usage
+   - App automatically tries fallback models (GPT-4o Mini → Free Llama)
+   - Check console for detailed error messages and retry attempts
 
 3. **Firestore connection failed**
    - Verify Firebase configuration
@@ -154,10 +204,14 @@ The app automatically detects development mode and:
 ### Debug Mode
 
 Open browser dev tools and check console for detailed logs. Development mode shows verbose information about:
-- Task parsing results
-- API requests/responses
-- Storage operations
-- Service worker events
+- Task parsing results and structured data
+- API requests/responses with model fallback attempts
+- Storage operations (local IndexedDB + Firestore sync)
+- Service worker caching and offline events
+- Environment detection and path resolution
+- Firebase configuration and connection status
+
+**Use test-api.html** for interactive API testing and environment debugging.
 
 ## Security Notes
 

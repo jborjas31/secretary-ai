@@ -347,7 +347,16 @@ class SecretaryApp {
                               now.getMinutes().toString().padStart(2, '0');
         
         const upcomingTasks = schedule.filter(task => {
-            return task.time >= currentTimeStr;
+            // Convert time strings to minutes since midnight
+            const timeToMinutes = (timeStr) => {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                return hours * 60 + minutes;
+            };
+            
+            const currentMinutes = timeToMinutes(currentTimeStr);
+            const taskMinutes = timeToMinutes(task.time);
+            
+            return taskMinutes >= currentMinutes;
         });
 
         // Render tasks
