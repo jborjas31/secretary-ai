@@ -282,7 +282,7 @@ class TaskDataService {
     }
 
     /**
-     * Migrate tasks from TaskParser format to Firestore
+     * Migrate tasks from TaskParser format to Firestore using batch operations
      */
     async migrateTasks(parsedTasks) {
         if (!this.isAvailable()) {
@@ -294,29 +294,57 @@ class TaskDataService {
             const migrationResults = {
                 success: true,
                 migrated: 0,
+                skipped: 0,
                 errors: [],
                 sections: {}
             };
 
+            // Get existing tasks to avoid duplicates
+            console.log('🔍 Checking for existing tasks...');
+            const existingTasks = await this.getAllTasks();
+            const existingTaskIds = new Set(existingTasks.map(t => t.id));
+            console.log(`📊 Found ${existingTasks.length} existing tasks in Firestore`);
+
+            // Get batch from Firestore modules
+            const { writeBatch, doc } = this.firestoreService.firestoreModules;
+            const batch = writeBatch(this.firestoreService.db);
+            let batchCount = 0;
+            const BATCH_LIMIT = 500; // Firestore batch limit
+
             // Process each section
+            console.log('📂 Processing sections:', Object.keys(parsedTasks));
+            
             for (const [sectionName, sectionTasks] of Object.entries(parsedTasks)) {
-                if (!Array.isArray(sectionTasks)) continue;
+                if (!Array.isArray(sectionTasks)) {
+                    console.log(`⚠️ Skipping ${sectionName} - not an array`);
+                    continue;
+                }
+                
+                console.log(`📋 Processing ${sectionName}: ${sectionTasks.length} tasks`);
                 
                 migrationResults.sections[sectionName] = {
                     total: sectionTasks.length,
                     migrated: 0,
+                    skipped: 0,
                     errors: []
                 };
 
                 for (const task of sectionTasks) {
                     try {
+                        // Skip if task already exists
+                        if (existingTaskIds.has(task.id)) {
+                            migrationResults.skipped++;
+                            migrationResults.sections[sectionName].skipped++;
+                            continue;
+                        }
+
                         // Convert TaskParser format to TaskDataService format
                         const taskData = {
                             id: task.id,
                             text: task.text,
                             section: task.section || sectionName,
                             priority: task.priority || 'medium',
-                            date: task.date,
+                            date: this.sanitizeDate(task.date),
                             completed: task.completed || false,
                             subTasks: task.subTasks || [],
                             reminders: task.details ? task.details.filter(d => d.type === 'reminder') : [],
@@ -328,11 +356,24 @@ class TaskDataService {
                             actualDuration: task.actualDuration || null
                         };
 
-                        await this.createTask(taskData);
+                        // Add to batch
+                        const docRef = doc(this.firestoreService.db, 'users', this.firestoreService.userId, 'tasks', taskData.id);
+                        batch.set(docRef, taskData);
+                        
                         migrationResults.migrated++;
                         migrationResults.sections[sectionName].migrated++;
+                        batchCount++;
+
+                        // Commit batch if limit reached
+                        if (batchCount >= BATCH_LIMIT) {
+                            console.log(`💾 Committing batch of ${batchCount} tasks...`);
+                            await batch.commit();
+                            // Create new batch for remaining tasks
+                            batch = writeBatch(this.firestoreService.db);
+                            batchCount = 0;
+                        }
                     } catch (error) {
-                        console.error(`Error migrating task ${task.id}:`, error);
+                        console.error(`Error preparing task ${task.id}:`, error);
                         migrationResults.errors.push({
                             taskId: task.id,
                             error: error.message
@@ -342,7 +383,19 @@ class TaskDataService {
                 }
             }
 
-            console.log(`Migration completed: ${migrationResults.migrated} tasks migrated`);
+            // Commit remaining tasks in batch
+            if (batchCount > 0) {
+                console.log(`💾 Committing final batch of ${batchCount} tasks...`);
+                await batch.commit();
+            }
+
+            console.log(`✅ Migration completed: ${migrationResults.migrated} new tasks migrated, ${migrationResults.skipped} skipped (already exist)`);
+            console.log('📊 Migration breakdown by section:', migrationResults.sections);
+            
+            // Update cache with newly migrated tasks
+            const allTasks = await this.getAllTasks();
+            console.log(`📋 Total tasks in Firestore after migration: ${allTasks.length}`);
+            
             return migrationResults;
         } catch (error) {
             console.error('Error during task migration:', error);
@@ -352,6 +405,27 @@ class TaskDataService {
                 migrated: 0
             };
         }
+    }
+
+    /**
+     * Sanitize date to ensure it's valid for Firestore
+     */
+    sanitizeDate(date) {
+        if (!date) return null;
+        
+        try {
+            // If it's already a valid date string or Date object
+            const dateObj = new Date(date);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj.toISOString();
+            }
+        } catch (e) {
+            // Invalid date
+        }
+        
+        // Return null for invalid dates instead of throwing
+        console.warn(`Invalid date detected: ${date}, using null instead`);
+        return null;
     }
 
     /**

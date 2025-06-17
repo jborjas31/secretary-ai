@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretary-ai-v9'; // Add LLM model badge in header
+const CACHE_NAME = 'secretary-ai-v11'; // Performance fix: batch migration operations
 const STATIC_ASSETS = [
     './',
     './index.html',

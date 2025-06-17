@@ -19,6 +19,7 @@ class SecretaryApp {
         this.refreshInterval = null;
         this.lastRefresh = null;
         this.settings = null;
+        this.migrationInProgress = false;
         
         // Task management state
         this.viewMode = 'schedule'; // 'schedule' or 'manage'
@@ -656,6 +657,14 @@ class SecretaryApp {
                 return;
             }
 
+            // Check if migration is already in progress
+            if (this.migrationInProgress) {
+                console.log('⏳ Migration already in progress, skipping...');
+                return;
+            }
+            
+            this.migrationInProgress = true;
+
             // Check current migration status
             const migrationStatus = await this.taskParser.checkMigrationStatus(this.taskDataService);
             console.log('Migration Status:', migrationStatus);
@@ -678,6 +687,30 @@ class SecretaryApp {
             } else if (migrationStatus.migrated) {
                 console.log(`✅ Migration already completed - ${migrationStatus.taskCount} tasks in Firestore`);
                 
+                // Check if all sections were migrated
+                const parsedTasks = await this.taskParser.getCachedTasks();
+                const totalTasksInMd = Object.values(parsedTasks).reduce((total, section) => 
+                    Array.isArray(section) ? total + section.length : total, 0);
+                
+                if (totalTasksInMd > migrationStatus.taskCount) {
+                    console.log(`⚠️ Incomplete migration detected: ${migrationStatus.taskCount} tasks in Firestore, but ${totalTasksInMd} tasks in tasks.md`);
+                    console.log('🔄 Re-running migration to include all sections...');
+                    
+                    // Show migration status to user
+                    this.setStatus('loading', `Migrating ${totalTasksInMd - migrationStatus.taskCount} missing tasks...`);
+                    
+                    // Force re-migration
+                    const migrationResult = await this.taskParser.migrateToFirestore(this.taskDataService);
+                    
+                    if (migrationResult.success) {
+                        console.log('✅ Re-migration completed successfully!');
+                        console.log(`📊 Total tasks after re-migration: ${migrationResult.migrated} new, ${migrationResult.skipped} skipped`);
+                        this.setStatus('online', 'Task migration completed');
+                    } else {
+                        this.setStatus('offline', 'Migration failed - some features may be limited');
+                    }
+                }
+                
                 // Still verify the system is working
                 await this.verifyMigration();
             }
@@ -687,6 +720,8 @@ class SecretaryApp {
 
         } catch (error) {
             console.error('❌ Error during migration test:', error);
+        } finally {
+            this.migrationInProgress = false;
         }
     }
 
@@ -704,11 +739,19 @@ class SecretaryApp {
             // Test task retrieval by section
             const todayTasks = await this.taskDataService.getTasksBySection('todayTasks');
             const upcomingTasks = await this.taskDataService.getTasksBySection('upcomingTasks');
+            const dailyTasks = await this.taskDataService.getTasksBySection('dailyTasks');
+            const weeklyTasks = await this.taskDataService.getTasksBySection('weeklyTasks');
+            const monthlyTasks = await this.taskDataService.getTasksBySection('monthlyTasks');
+            const yearlyTasks = await this.taskDataService.getTasksBySection('yearlyTasks');
             const undatedTasks = await this.taskDataService.getTasksBySection('undatedTasks');
             
             console.log(`📅 Task distribution:`, {
                 today: todayTasks.length,
                 upcoming: upcomingTasks.length,
+                daily: dailyTasks.length,
+                weekly: weeklyTasks.length,
+                monthly: monthlyTasks.length,
+                yearly: yearlyTasks.length,
                 undated: undatedTasks.length,
                 total: allTasks.length
             });
