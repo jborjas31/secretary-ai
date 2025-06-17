@@ -844,18 +844,35 @@ class SecretaryApp {
      */
     async loadTasksForManagement() {
         try {
+            console.log('🔄 Loading tasks for management view...');
+            console.log('TaskDataService available:', this.taskDataService.isAvailable());
+            
             if (this.taskDataService.isAvailable()) {
                 // Load from TaskDataService (Phase 1)
                 this.currentTasks = await this.taskDataService.getAllTasks();
+                console.log('📊 Loaded from TaskDataService:', this.currentTasks.length, 'tasks');
             } else {
                 // Fallback to TaskParser
+                console.log('📄 Falling back to TaskParser...');
                 const parsedTasks = await this.taskParser.getCachedTasks();
+                console.log('📋 Parsed task sections:', Object.keys(parsedTasks || {}));
+                console.log('📋 Section contents:', parsedTasks);
+                
                 this.currentTasks = this.flattenTaskSections(parsedTasks);
+                console.log('📝 Flattened tasks:', this.currentTasks.length, 'total tasks');
+                
+                // Log tasks by section for debugging
+                const tasksBySection = this.groupTasksBySection(this.currentTasks);
+                console.log('📂 Tasks grouped by section:', Object.keys(tasksBySection));
+                Object.entries(tasksBySection).forEach(([section, tasks]) => {
+                    console.log(`  ${section}: ${tasks.length} tasks`);
+                });
             }
             
             this.applyTaskFilters();
+            console.log('✅ Task loading completed. Filtered tasks:', this.filteredTasks.length);
         } catch (error) {
-            console.error('Error loading tasks for management:', error);
+            console.error('❌ Error loading tasks for management:', error);
             this.showToast('Failed to load tasks', 'error');
         }
     }
@@ -884,16 +901,22 @@ class SecretaryApp {
      * Update task management display
      */
     updateTaskManagementDisplay() {
-        if (!this.elements.taskSectionsContainer) return;
+        console.log('🖼️ Updating task management display...');
+        if (!this.elements.taskSectionsContainer) {
+            console.error('❌ taskSectionsContainer element not found!');
+            return;
+        }
 
         // Group tasks by section
         const tasksBySection = this.groupTasksBySection(this.filteredTasks);
+        console.log('📂 Display: Tasks grouped by section:', Object.keys(tasksBySection));
         
         // Clear existing content
         this.elements.taskSectionsContainer.innerHTML = '';
         
         // Check if there are any tasks
         if (this.filteredTasks.length === 0) {
+            console.log('📭 No filtered tasks - showing empty state');
             this.elements.taskManagementEmpty.style.display = 'block';
             return;
         } else {
@@ -902,14 +925,21 @@ class SecretaryApp {
 
         // Render each section
         const sectionOrder = ['todayTasks', 'upcomingTasks', 'dailyTasks', 'weeklyTasks', 'monthlyTasks', 'yearlyTasks', 'undatedTasks'];
+        console.log('🔢 Section rendering order:', sectionOrder);
         
+        let sectionsRendered = 0;
         sectionOrder.forEach(sectionKey => {
             const tasks = tasksBySection[sectionKey];
+            console.log(`📋 Section ${sectionKey}:`, tasks ? tasks.length : 0, 'tasks');
             if (tasks && tasks.length > 0) {
                 const sectionElement = this.createTaskSection(sectionKey, tasks);
                 this.elements.taskSectionsContainer.appendChild(sectionElement);
+                sectionsRendered++;
+                console.log(`✅ Rendered section: ${sectionKey} with ${tasks.length} tasks`);
             }
         });
+        
+        console.log(`🎨 Total sections rendered: ${sectionsRendered}`);
     }
 
     /**
@@ -1266,11 +1296,49 @@ class SecretaryApp {
     }
 
     /**
+     * Handle task created event
+     */
+    handleTaskCreated(task) {
+        console.log('Task created event received:', task);
+        // Add task to current list if not already there
+        if (!this.currentTasks.find(t => t.id === task.id)) {
+            this.currentTasks.push(task);
+        }
+        
+        // Refresh filters and display
+        this.applyTaskFilters();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
+     * Handle task updated event
+     */
+    handleTaskUpdated(taskId, updates) {
+        console.log('Task updated event received:', taskId, updates);
+        // Update task in current list
+        const taskIndex = this.currentTasks.findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+            this.currentTasks[taskIndex] = { ...this.currentTasks[taskIndex], ...updates };
+        }
+        
+        // Refresh filters and display
+        this.applyTaskFilters();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
      * Handle task deleted event
      */
     handleTaskDeleted(taskId) {
-        // Refresh task list
-        this.loadTasksForManagement();
+        console.log('Task deleted event received:', taskId);
+        // Remove task from current list
+        const taskIndex = this.currentTasks.findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+            this.currentTasks.splice(taskIndex, 1);
+        }
+        
+        // Refresh filters and display
+        this.applyTaskFilters();
         this.updateTaskManagementDisplay();
     }
 
