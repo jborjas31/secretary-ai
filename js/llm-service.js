@@ -92,6 +92,28 @@ class LLMService {
     }
 
     /**
+     * Get current model
+     */
+    getCurrentModel() {
+        return this.model;
+    }
+
+    /**
+     * Get human-readable model name
+     */
+    getModelDisplayName() {
+        const modelMap = {
+            'anthropic/claude-3.5-sonnet': 'Claude 3.5',
+            'openai/gpt-4o': 'GPT-4o',
+            'openai/gpt-4o-mini': 'GPT-4o Mini',
+            'deepseek/deepseek-r1': 'DeepSeek R1',
+            'deepseek/deepseek-r1:free': 'DeepSeek R1 Free'
+        };
+        
+        return modelMap[this.model] || this.model.split('/').pop();
+    }
+
+    /**
      * Generate a dynamic daily schedule based on tasks and current time
      */
     async generateDailySchedule(tasks, currentTime = new Date()) {

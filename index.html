@@ -15,7 +15,13 @@
     <div class="app">
         <header class="header">
             <h1 class="title">Secretary AI</h1>
-            <div class="current-time" id="currentTime"></div>
+            <div class="header-info">
+                <div class="current-time" id="currentTime"></div>
+                <div class="model-badge" id="modelBadge" title="Click to change AI model">
+                    <span class="model-icon">🤖</span>
+                    <span class="model-name" id="modelName">Claude 3.5</span>
+                </div>
+            </div>
             <div class="header-controls">
                 <button class="view-toggle-btn" id="viewToggleBtn" title="Toggle Task Management">📋</button>
                 <button class="refresh-btn" id="refreshBtn" title="Refresh Schedule">🔄</button>

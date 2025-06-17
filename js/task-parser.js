@@ -212,7 +212,13 @@ class TaskParser {
             }
             
             const content = await response.text();
-            return await this.parseTasksFromMarkdown(content);
+            const tasks = await this.parseTasksFromMarkdown(content);
+            
+            // Cache the parsed tasks for getCachedTasks() to use
+            this.parsedTasks = tasks;
+            this.lastParsed = new Date();
+            
+            return tasks;
         } catch (error) {
             console.error('Error loading tasks:', error);
             throw error;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretary-ai-v6'; // Updated version for Phase 2 completion
+const CACHE_NAME = 'secretary-ai-v9'; // Add LLM model badge in header
 const STATIC_ASSETS = [
     './',
     './index.html',

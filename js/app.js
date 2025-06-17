@@ -106,6 +106,10 @@ class SecretaryApp {
             saveSettings: document.getElementById('saveSettings'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             
+            // Model badge elements
+            modelBadge: document.getElementById('modelBadge'),
+            modelName: document.getElementById('modelName'),
+            
             // New task management elements
             viewToggleBtn: document.getElementById('viewToggleBtn'),
             scheduleView: document.getElementById('scheduleView'),
@@ -164,6 +168,9 @@ class SecretaryApp {
         if (this.settings && this.settings.selectedModel) {
             this.llmService.setModel(this.settings.selectedModel);
         }
+        
+        // Update model badge display
+        this.updateModelBadge();
     }
 
     /**
@@ -192,6 +199,10 @@ class SecretaryApp {
         this.setStatus('loading', 'Loading your tasks...');
         
         try {
+            // Always load and cache tasks for Task Management view
+            await this.taskParser.loadAndParseTasks();
+            console.log('Tasks loaded and cached for Task Management');
+            
             // Try to load today's schedule from cache first
             const today = new Date().toISOString().split('T')[0];
             const cachedSchedule = await this.storageService.loadSchedule(today);
@@ -323,6 +334,9 @@ class SecretaryApp {
 
         // View toggle button
         this.elements.viewToggleBtn.addEventListener('click', this.toggleViewMode);
+
+        // Model badge click to open settings
+        this.elements.modelBadge.addEventListener('click', () => this.openSettings());
 
         // Settings modal
         this.elements.settingsBtn.addEventListener('click', () => this.openSettings());
@@ -477,6 +491,16 @@ class SecretaryApp {
     }
 
     /**
+     * Update model badge display
+     */
+    updateModelBadge() {
+        if (this.elements.modelName && this.llmService) {
+            const displayName = this.llmService.getModelDisplayName();
+            this.elements.modelName.textContent = displayName;
+        }
+    }
+
+    /**
      * Update last updated display
      */
     updateLastUpdated() {
@@ -558,6 +582,9 @@ class SecretaryApp {
             // Update LLM service
             this.llmService.setApiKey(newSettings.openrouterApiKey);
             this.llmService.setModel(newSettings.selectedModel);
+            
+            // Update model badge display
+            this.updateModelBadge();
 
             // Update auto-refresh
             this.setupAutoRefresh();

@@ -43,6 +43,12 @@ body {
     gap: 0.5rem;
 }
 
+.header-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .title {
     font-size: 1.8rem;
     font-weight: 600;
@@ -53,6 +59,36 @@ body {
     font-size: 1.1rem;
     font-weight: 500;
     opacity: 0.9;
+}
+
+.model-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(255,255,255,0.15);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.model-badge:hover {
+    background: rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.model-icon {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.model-name {
+    opacity: 0.95;
+    white-space: nowrap;
 }
 
 .refresh-btn, .view-toggle-btn {
@@ -443,6 +479,16 @@ body {
         flex-direction: column;
         gap: 0.5rem;
         text-align: center;
+    }
+    
+    .header-info {
+        justify-content: center;
+        gap: 0.8rem;
+    }
+    
+    .model-badge {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
     }
     
     .title {
