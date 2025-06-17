@@ -11,7 +11,7 @@
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .task-management-header {
@@ -593,7 +593,30 @@
 }
 
 .section-content.expanded {
-    max-height: 1000px;
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar styling */
+.section-content.expanded::-webkit-scrollbar {
+    width: 6px;
+}
+
+.section-content.expanded::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.section-content.expanded::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.section-content.expanded::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 /* ==============================================
@@ -637,6 +660,16 @@
     .task-item-editable {
         padding: 1rem;
     }
+    
+    /* Better mobile scrolling for sections */
+    .section-content.expanded {
+        max-height: 60vh; /* Smaller on mobile to leave room for other content */
+    }
+    
+    /* Larger scrollbar on mobile for easier touch interaction */
+    .section-content.expanded::-webkit-scrollbar {
+        width: 8px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -649,6 +682,11 @@
     
     .section-header {
         padding: 0.75rem 1rem;
+    }
+    
+    /* Even smaller sections on very small screens */
+    .section-content.expanded {
+        max-height: 50vh;
     }
 }
 
@@ -688,5 +726,18 @@
         background: #34495e;
         border-color: #34495e;
         color: #ecf0f1;
+    }
+    
+    /* Dark mode scrollbar styling */
+    .section-content.expanded::-webkit-scrollbar-track {
+        background: #34495e;
+    }
+    
+    .section-content.expanded::-webkit-scrollbar-thumb {
+        background: #5a6c7d;
+    }
+    
+    .section-content.expanded::-webkit-scrollbar-thumb:hover {
+        background: #67809a;
     }
 }
