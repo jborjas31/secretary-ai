@@ -154,106 +154,135 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format:
 Use these categories: work, personal, routine, urgent, health, social
 Use these priorities: high, medium, low`;
 
-        try {
-            const payload = {
-                model: this.model,
-                models: [this.model, ...this.fallbackModels], // Fallback models for reliability
-                messages: [
-                    {
-                        role: 'system',
-                        content: systemPrompt
-                    },
-                    {
-                        role: 'user',
-                        content: userPrompt
-                    }
-                ],
-                temperature: 0.3,
-                max_tokens: 2000,
-                response_format: {
-                    type: 'json_schema',
-                    json_schema: {
-                        name: 'daily_schedule',
-                        strict: true,
-                        schema: {
-                            type: 'object',
-                            properties: {
-                                schedule: {
-                                    type: 'array',
-                                    description: 'Array of scheduled tasks for the day',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            time: {
-                                                type: 'string',
-                                                description: 'Time in HH:MM format (24-hour)',
-                                                pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+        // Try with the user's selected model first, then fallback if needed
+        const modelsToTry = [this.model, ...this.fallbackModels];
+        
+        for (let i = 0; i < modelsToTry.length; i++) {
+            const currentModel = modelsToTry[i];
+            const isLastModel = i === modelsToTry.length - 1;
+            
+            try {
+                console.log(`Attempting schedule generation with model: ${currentModel}`);
+                
+                const payload = {
+                    model: currentModel, // Use only the specific model, not the models array
+                    messages: [
+                        {
+                            role: 'system',
+                            content: systemPrompt
+                        },
+                        {
+                            role: 'user',
+                            content: userPrompt
+                        }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 2000,
+                    response_format: {
+                        type: 'json_schema',
+                        json_schema: {
+                            name: 'daily_schedule',
+                            strict: true,
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    schedule: {
+                                        type: 'array',
+                                        description: 'Array of scheduled tasks for the day',
+                                        items: {
+                                            type: 'object',
+                                            properties: {
+                                                time: {
+                                                    type: 'string',
+                                                    description: 'Time in HH:MM format (24-hour)',
+                                                    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+                                                },
+                                                task: {
+                                                    type: 'string',
+                                                    description: 'Brief description of the task'
+                                                },
+                                                duration: {
+                                                    type: 'string',
+                                                    description: 'Estimated duration (e.g., "30 minutes", "1 hour")'
+                                                },
+                                                priority: {
+                                                    type: 'string',
+                                                    enum: ['high', 'medium', 'low'],
+                                                    description: 'Task priority level'
+                                                },
+                                                category: {
+                                                    type: 'string',
+                                                    enum: ['work', 'personal', 'routine', 'urgent', 'health', 'social'],
+                                                    description: 'Task category'
+                                                }
                                             },
-                                            task: {
-                                                type: 'string',
-                                                description: 'Brief description of the task'
-                                            },
-                                            duration: {
-                                                type: 'string',
-                                                description: 'Estimated duration (e.g., "30 minutes", "1 hour")'
-                                            },
-                                            priority: {
-                                                type: 'string',
-                                                enum: ['high', 'medium', 'low'],
-                                                description: 'Task priority level'
-                                            },
-                                            category: {
-                                                type: 'string',
-                                                enum: ['work', 'personal', 'routine', 'urgent', 'health', 'social'],
-                                                description: 'Task category'
-                                            }
-                                        },
-                                        required: ['time', 'task', 'duration', 'priority', 'category'],
-                                        additionalProperties: false
+                                            required: ['time', 'task', 'duration', 'priority', 'category'],
+                                            additionalProperties: false
+                                        }
+                                    },
+                                    summary: {
+                                        type: 'string',
+                                        description: 'Brief explanation of the schedule logic and priorities'
                                     }
                                 },
-                                summary: {
-                                    type: 'string',
-                                    description: 'Brief explanation of the schedule logic and priorities'
-                                }
-                            },
-                            required: ['schedule', 'summary'],
-                            additionalProperties: false
+                                required: ['schedule', 'summary'],
+                                additionalProperties: false
+                            }
                         }
                     }
+                };
+
+                const response = await this.makeRequest(payload);
+                
+                if (!response.choices || !response.choices[0] || !response.choices[0].message) {
+                    throw new Error('Invalid response format from OpenRouter');
                 }
-            };
 
-            const response = await this.makeRequest(payload);
-            
-            if (!response.choices || !response.choices[0] || !response.choices[0].message) {
-                throw new Error('Invalid response format from OpenRouter');
+                const content = response.choices[0].message.content;
+                const scheduleData = JSON.parse(content);
+                
+                // Validate the response structure
+                if (!scheduleData.schedule || !Array.isArray(scheduleData.schedule)) {
+                    throw new Error('Invalid schedule format in LLM response');
+                }
+
+                // Add metadata including which model was actually used
+                scheduleData.generatedAt = currentTime.toISOString();
+                scheduleData.generatedFor = dateStr;
+                scheduleData.usage = response.usage;
+                scheduleData.modelUsed = currentModel;
+                if (currentModel !== this.model) {
+                    scheduleData.fallbackUsed = true;
+                    console.log(`Fallback model used: ${currentModel} (user selected: ${this.model})`);
+                }
+
+                return scheduleData;
+                
+            } catch (error) {
+                console.error(`Error with model ${currentModel}:`, error);
+                
+                // If this is the last model or it's a JSON parsing error, handle differently
+                if (isLastModel) {
+                    // Return a fallback schedule if all models fail
+                    if (error.message.includes('JSON')) {
+                        console.warn('All models returned invalid JSON, creating fallback schedule');
+                        return this.createFallbackSchedule(tasks, currentTime);
+                    }
+                    throw error;
+                } else if (error.message.includes('JSON')) {
+                    // JSON errors likely indicate model-specific issues, try next model
+                    console.warn(`Model ${currentModel} returned invalid JSON, trying next model...`);
+                    continue;
+                }
+                
+                // For API errors like 401, 402, don't try other models
+                if (error.message.includes('API key') || error.message.includes('credits')) {
+                    throw error;
+                }
+                
+                // For other errors, continue to next model
+                console.warn(`Model ${currentModel} failed, trying next model...`);
             }
-
-            const content = response.choices[0].message.content;
-            const scheduleData = JSON.parse(content);
-            
-            // Validate the response structure
-            if (!scheduleData.schedule || !Array.isArray(scheduleData.schedule)) {
-                throw new Error('Invalid schedule format in LLM response');
-            }
-
-            // Add metadata
-            scheduleData.generatedAt = currentTime.toISOString();
-            scheduleData.generatedFor = dateStr;
-            scheduleData.usage = response.usage;
-
-            return scheduleData;
-        } catch (error) {
-            console.error('Error generating schedule:', error);
-            
-            // Return a fallback schedule if LLM fails
-            if (error.message.includes('JSON')) {
-                console.warn('LLM returned invalid JSON, creating fallback schedule');
-                return this.createFallbackSchedule(tasks, currentTime);
-            }
-            
-            throw error;
         }
     }
 

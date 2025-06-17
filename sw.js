@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretary-ai-v2'; // Updated version for new cache
+const CACHE_NAME = 'secretary-ai-v3'; // Updated version for new cache
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -9,8 +9,7 @@ const STATIC_ASSETS = [
     './js/storage.js',
     './js/firestore.js',
     './js/task-parser.js',
-    './js/llm-service.js',
-    './tasks.md'
+    './js/llm-service.js'
 ];
 
 // Install event - cache static assets
@@ -70,6 +69,29 @@ self.addEventListener('fetch', event => {
                         status: 503,
                         headers: { 'Content-Type': 'application/json' }
                     });
+                })
+        );
+        return;
+    }
+
+    // Special handling for tasks.md - network first with cache fallback
+    if (event.request.url.endsWith('tasks.md')) {
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    // If successful, cache the new version
+                    if (response.status === 200) {
+                        const responseClone = response.clone();
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                cache.put(event.request, responseClone);
+                            });
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    // If network fails, try cache
+                    return caches.match(event.request);
                 })
         );
         return;
