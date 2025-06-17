@@ -20,11 +20,31 @@ class SecretaryApp {
         this.lastRefresh = null;
         this.settings = null;
         
+        // Task management state
+        this.viewMode = 'schedule'; // 'schedule' or 'manage'
+        this.currentTasks = [];
+        this.filteredTasks = [];
+        this.searchQuery = '';
+        this.activeFilters = {
+            section: 'all',
+            priority: 'all',
+            completed: 'all'
+        };
+        
         // UI elements (will be initialized in initializeUI)
         this.elements = {};
         
+        // UI components for task management
+        this.components = {
+            searchBar: null,
+            floatingActionButton: null,
+            taskForm: null,
+            taskSections: {}
+        };
+        
         // Bind methods
         this.refreshSchedule = this.refreshSchedule.bind(this);
+        this.toggleViewMode = this.toggleViewMode.bind(this);
     }
 
     /**
@@ -67,6 +87,7 @@ class SecretaryApp {
      */
     initializeUI() {
         this.elements = {
+            // Existing elements
             currentTime: document.getElementById('currentTime'),
             refreshBtn: document.getElementById('refreshBtn'),
             status: document.getElementById('status'),
@@ -83,12 +104,24 @@ class SecretaryApp {
             modelSelect: document.getElementById('modelSelect'),
             refreshInterval: document.getElementById('refreshInterval'),
             saveSettings: document.getElementById('saveSettings'),
-            loadingOverlay: document.getElementById('loadingOverlay')
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            
+            // New task management elements
+            viewToggleBtn: document.getElementById('viewToggleBtn'),
+            scheduleView: document.getElementById('scheduleView'),
+            taskManagementView: document.getElementById('taskManagementView'),
+            searchBarContainer: document.getElementById('searchBarContainer'),
+            filterControlsContainer: document.getElementById('filterControlsContainer'),
+            taskSectionsContainer: document.getElementById('taskSectionsContainer'),
+            taskManagementEmpty: document.getElementById('taskManagementEmpty')
         };
 
         // Update current time
         this.updateCurrentTime();
         setInterval(() => this.updateCurrentTime(), 30000); // Update every 30 seconds
+        
+        // Initialize task management components
+        this.initializeTaskManagementComponents();
     }
 
     /**
@@ -288,6 +321,9 @@ class SecretaryApp {
         // Refresh button
         this.elements.refreshBtn.addEventListener('click', this.refreshSchedule);
 
+        // View toggle button
+        this.elements.viewToggleBtn.addEventListener('click', this.toggleViewMode);
+
         // Settings modal
         this.elements.settingsBtn.addEventListener('click', () => this.openSettings());
         this.elements.modalClose.addEventListener('click', () => this.closeSettings());
@@ -326,7 +362,11 @@ class SecretaryApp {
      * Update the main UI
      */
     updateUI() {
-        this.updateScheduleDisplay();
+        if (this.viewMode === 'schedule') {
+            this.updateScheduleDisplay();
+        } else {
+            this.updateTaskManagementDisplay();
+        }
         this.updateLastUpdated();
         this.updateStatus();
     }
@@ -712,6 +752,548 @@ class SecretaryApp {
             console.error('❌ Backward compatibility test failed:', error);
             return false;
         }
+    }
+
+    /* ==============================================
+       TASK MANAGEMENT METHODS (Phase 2)
+       ============================================== */
+
+    /**
+     * Initialize task management UI components
+     */
+    initializeTaskManagementComponents() {
+        // Initialize search bar
+        if (this.elements.searchBarContainer) {
+            this.components.searchBar = new UIComponents.SearchBarComponent({
+                placeholder: 'Search tasks...',
+                onSearch: (query) => this.handleTaskSearch(query)
+            });
+            this.elements.searchBarContainer.appendChild(this.components.searchBar.render());
+        }
+
+        // Initialize floating action button
+        this.components.floatingActionButton = new UIComponents.FloatingActionButton({
+            icon: '+',
+            label: 'Add Task',
+            onClick: () => this.showTaskForm('create')
+        });
+        
+        // Initialize task event listeners
+        this.setupTaskEventListeners();
+    }
+
+    /**
+     * Set up task management event listeners
+     */
+    setupTaskEventListeners() {
+        // Subscribe to task events
+        globalEventManager.on(TaskEvents.TASK_CREATED, (data) => {
+            this.handleTaskCreated(data.task);
+        });
+
+        globalEventManager.on(TaskEvents.TASK_UPDATED, (data) => {
+            this.handleTaskUpdated(data.taskId, data.updates);
+        });
+
+        globalEventManager.on(TaskEvents.TASK_DELETED, (data) => {
+            this.handleTaskDeleted(data.taskId);
+        });
+
+        globalEventManager.on(TaskEvents.TASK_COMPLETED, (data) => {
+            this.handleTaskCompleted(data.taskId, data.completed);
+        });
+    }
+
+    /**
+     * Toggle between schedule and task management views
+     */
+    toggleViewMode() {
+        this.viewMode = this.viewMode === 'schedule' ? 'manage' : 'schedule';
+        
+        // Update UI elements visibility
+        if (this.viewMode === 'schedule') {
+            this.elements.scheduleView.style.display = 'block';
+            this.elements.taskManagementView.style.display = 'none';
+            this.elements.viewToggleBtn.classList.remove('active');
+            this.elements.viewToggleBtn.title = 'Switch to Task Management';
+            
+            // Remove floating action button
+            if (this.components.floatingActionButton?.element) {
+                this.components.floatingActionButton.element.remove();
+            }
+        } else {
+            this.elements.scheduleView.style.display = 'none';
+            this.elements.taskManagementView.style.display = 'block';
+            this.elements.viewToggleBtn.classList.add('active');
+            this.elements.viewToggleBtn.title = 'Switch to Schedule View';
+            
+            // Add floating action button
+            if (this.components.floatingActionButton) {
+                document.body.appendChild(this.components.floatingActionButton.render());
+            }
+            
+            // Load tasks for management view
+            this.loadTasksForManagement();
+        }
+        
+        this.updateUI();
+    }
+
+    /**
+     * Load tasks for task management view
+     */
+    async loadTasksForManagement() {
+        try {
+            if (this.taskDataService.isAvailable()) {
+                // Load from TaskDataService (Phase 1)
+                this.currentTasks = await this.taskDataService.getAllTasks();
+            } else {
+                // Fallback to TaskParser
+                const parsedTasks = await this.taskParser.parseTasks();
+                this.currentTasks = this.flattenTaskSections(parsedTasks);
+            }
+            
+            this.applyTaskFilters();
+        } catch (error) {
+            console.error('Error loading tasks for management:', error);
+            this.showToast('Failed to load tasks', 'error');
+        }
+    }
+
+    /**
+     * Flatten task sections into a single array
+     */
+    flattenTaskSections(taskSections) {
+        const allTasks = [];
+        
+        Object.entries(taskSections).forEach(([sectionName, tasks]) => {
+            if (Array.isArray(tasks)) {
+                tasks.forEach(task => {
+                    allTasks.push({
+                        ...task,
+                        section: task.section || sectionName
+                    });
+                });
+            }
+        });
+        
+        return allTasks;
+    }
+
+    /**
+     * Update task management display
+     */
+    updateTaskManagementDisplay() {
+        if (!this.elements.taskSectionsContainer) return;
+
+        // Group tasks by section
+        const tasksBySection = this.groupTasksBySection(this.filteredTasks);
+        
+        // Clear existing content
+        this.elements.taskSectionsContainer.innerHTML = '';
+        
+        // Check if there are any tasks
+        if (this.filteredTasks.length === 0) {
+            this.elements.taskManagementEmpty.style.display = 'block';
+            return;
+        } else {
+            this.elements.taskManagementEmpty.style.display = 'none';
+        }
+
+        // Render each section
+        const sectionOrder = ['todayTasks', 'upcomingTasks', 'dailyTasks', 'weeklyTasks', 'monthlyTasks', 'yearlyTasks', 'undatedTasks'];
+        
+        sectionOrder.forEach(sectionKey => {
+            const tasks = tasksBySection[sectionKey];
+            if (tasks && tasks.length > 0) {
+                const sectionElement = this.createTaskSection(sectionKey, tasks);
+                this.elements.taskSectionsContainer.appendChild(sectionElement);
+            }
+        });
+    }
+
+    /**
+     * Group tasks by section
+     */
+    groupTasksBySection(tasks) {
+        return tasks.reduce((sections, task) => {
+            const section = task.section || 'undatedTasks';
+            if (!sections[section]) {
+                sections[section] = [];
+            }
+            sections[section].push(task);
+            return sections;
+        }, {});
+    }
+
+    /**
+     * Create a collapsible task section
+     */
+    createTaskSection(sectionKey, tasks) {
+        const sectionNames = {
+            todayTasks: 'Today',
+            upcomingTasks: 'Upcoming',
+            dailyTasks: 'Daily Routine',
+            weeklyTasks: 'Weekly',
+            monthlyTasks: 'Monthly',
+            yearlyTasks: 'Yearly',
+            undatedTasks: 'Undated'
+        };
+
+        const sectionElement = document.createElement('div');
+        sectionElement.className = 'collapsible-section';
+        sectionElement.innerHTML = `
+            <div class="section-header" data-section="${sectionKey}">
+                <h3 class="section-title">
+                    ${sectionNames[sectionKey] || sectionKey}
+                    <span class="section-count">${tasks.length}</span>
+                </h3>
+                <span class="section-toggle">▼</span>
+            </div>
+            <div class="section-content expanded">
+                <div class="section-task-list" data-section="${sectionKey}"></div>
+            </div>
+        `;
+
+        // Add click handler for collapsible header
+        const header = sectionElement.querySelector('.section-header');
+        const content = sectionElement.querySelector('.section-content');
+        const toggle = sectionElement.querySelector('.section-toggle');
+        
+        header.addEventListener('click', () => {
+            content.classList.toggle('expanded');
+            toggle.classList.toggle('expanded');
+        });
+
+        // Render tasks in this section
+        const taskListElement = sectionElement.querySelector('.section-task-list');
+        const taskListComponent = new UIComponents.TaskListComponent({
+            tasks: tasks,
+            onTaskClick: (taskId) => this.handleTaskClick(taskId),
+            onTaskEdit: (taskId) => this.handleTaskEdit(taskId),
+            onTaskDelete: (taskId) => this.handleTaskDelete(taskId),
+            onTaskComplete: (taskId, completed) => this.handleTaskComplete(taskId, completed),
+            showActions: true
+        });
+
+        taskListElement.appendChild(taskListComponent.render());
+        
+        // Store component reference for updates
+        this.components.taskSections[sectionKey] = taskListComponent;
+
+        return sectionElement;
+    }
+
+    /**
+     * Apply current filters to tasks
+     */
+    applyTaskFilters() {
+        let filtered = [...this.currentTasks];
+
+        // Apply search filter
+        if (this.searchQuery) {
+            filtered = filtered.filter(task => 
+                task.text.toLowerCase().includes(this.searchQuery.toLowerCase())
+            );
+        }
+
+        // Apply section filter
+        if (this.activeFilters.section !== 'all') {
+            filtered = filtered.filter(task => task.section === this.activeFilters.section);
+        }
+
+        // Apply priority filter
+        if (this.activeFilters.priority !== 'all') {
+            filtered = filtered.filter(task => task.priority === this.activeFilters.priority);
+        }
+
+        // Apply completion filter
+        if (this.activeFilters.completed !== 'all') {
+            const showCompleted = this.activeFilters.completed === 'completed';
+            filtered = filtered.filter(task => !!task.completed === showCompleted);
+        }
+
+        this.filteredTasks = filtered;
+    }
+
+    /**
+     * Handle task search
+     */
+    handleTaskSearch(query) {
+        this.searchQuery = query;
+        this.applyTaskFilters();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
+     * Show task form for creating or editing
+     */
+    showTaskForm(mode, task = null) {
+        // Remove existing form if any
+        if (this.components.taskForm) {
+            this.components.taskForm.destroy();
+        }
+
+        this.components.taskForm = new UIComponents.TaskFormComponent({
+            mode: mode,
+            task: task,
+            onSubmit: (taskData) => this.handleTaskFormSubmit(mode, taskData),
+            onCancel: () => this.hideTaskForm()
+        });
+
+        document.body.appendChild(this.components.taskForm.render());
+    }
+
+    /**
+     * Hide task form
+     */
+    hideTaskForm() {
+        if (this.components.taskForm) {
+            this.components.taskForm.destroy();
+            this.components.taskForm = null;
+        }
+    }
+
+    /**
+     * Handle task form submission
+     */
+    async handleTaskFormSubmit(mode, taskData) {
+        try {
+            // Validate task data
+            const validation = ValidationUtils.validateTask(taskData);
+            if (!validation.isValid) {
+                const errorMessage = ValidationUtils.formatValidationErrors(validation.errors);
+                this.showToast(errorMessage, 'error');
+                return;
+            }
+
+            // Sanitize task data
+            const sanitizedData = ValidationUtils.sanitizeTaskData(taskData);
+
+            // Parse natural language date if provided
+            if (sanitizedData.date) {
+                const dateResult = ValidationUtils.parseNaturalDate(sanitizedData.date);
+                if (dateResult.isValid) {
+                    sanitizedData.date = dateResult.formatted;
+                } else {
+                    this.showToast(dateResult.error, 'error');
+                    return;
+                }
+            }
+
+            if (mode === 'create') {
+                await this.createTask(sanitizedData);
+            } else {
+                await this.updateTask(sanitizedData.id, sanitizedData);
+            }
+
+            this.hideTaskForm();
+        } catch (error) {
+            console.error('Error submitting task form:', error);
+            this.showToast('Failed to save task', 'error');
+        }
+    }
+
+    /* ==============================================
+       TASK CRUD OPERATIONS
+       ============================================== */
+
+    /**
+     * Create a new task
+     */
+    async createTask(taskData) {
+        try {
+            let newTask;
+            
+            if (this.taskDataService.isAvailable()) {
+                newTask = await this.taskDataService.createTask(taskData);
+            } else {
+                // Fallback: add to current tasks and save via TaskParser
+                newTask = {
+                    id: this.generateTaskId(),
+                    ...taskData,
+                    createdAt: new Date().toISOString()
+                };
+                this.currentTasks.push(newTask);
+            }
+
+            // Emit event
+            await TaskEventHelpers.emitTaskCreated(newTask);
+            
+            this.showToast('Task created successfully', 'success');
+        } catch (error) {
+            console.error('Error creating task:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update an existing task
+     */
+    async updateTask(taskId, updates) {
+        try {
+            let updatedTask;
+            
+            if (this.taskDataService.isAvailable()) {
+                await this.taskDataService.updateTask(taskId, updates);
+                updatedTask = await this.taskDataService.getTask(taskId);
+            } else {
+                // Fallback: update in current tasks
+                const taskIndex = this.currentTasks.findIndex(t => t.id === taskId);
+                if (taskIndex !== -1) {
+                    this.currentTasks[taskIndex] = { ...this.currentTasks[taskIndex], ...updates };
+                    updatedTask = this.currentTasks[taskIndex];
+                }
+            }
+
+            // Emit event
+            await TaskEventHelpers.emitTaskUpdated(taskId, updates, updatedTask);
+            
+            this.showToast('Task updated successfully', 'success');
+        } catch (error) {
+            console.error('Error updating task:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete a task
+     */
+    async deleteTask(taskId) {
+        try {
+            let deletedTask;
+            
+            if (this.taskDataService.isAvailable()) {
+                deletedTask = await this.taskDataService.getTask(taskId);
+                await this.taskDataService.deleteTask(taskId);
+            } else {
+                // Fallback: remove from current tasks
+                const taskIndex = this.currentTasks.findIndex(t => t.id === taskId);
+                if (taskIndex !== -1) {
+                    deletedTask = this.currentTasks[taskIndex];
+                    this.currentTasks.splice(taskIndex, 1);
+                }
+            }
+
+            // Emit event
+            await TaskEventHelpers.emitTaskDeleted(taskId, deletedTask);
+            
+            this.showToast('Task deleted successfully', 'success');
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Toggle task completion
+     */
+    async completeTask(taskId, completed) {
+        try {
+            const updates = { 
+                completed: completed,
+                completedAt: completed ? new Date().toISOString() : null
+            };
+            
+            await this.updateTask(taskId, updates);
+            
+            // Emit completion event
+            await TaskEventHelpers.emitTaskCompleted(taskId, completed);
+            
+            const message = completed ? 'Task completed!' : 'Task marked as incomplete';
+            this.showToast(message, 'success');
+        } catch (error) {
+            console.error('Error updating task completion:', error);
+            throw error;
+        }
+    }
+
+    /* ==============================================
+       TASK EVENT HANDLERS
+       ============================================== */
+
+    /**
+     * Handle task click
+     */
+    handleTaskClick(taskId) {
+        const task = this.currentTasks.find(t => t.id === taskId);
+        if (task) {
+            // Show task details or quick actions
+            console.log('Task clicked:', task);
+        }
+    }
+
+    /**
+     * Handle task edit
+     */
+    handleTaskEdit(taskId) {
+        const task = this.currentTasks.find(t => t.id === taskId);
+        if (task) {
+            this.showTaskForm('edit', task);
+        }
+    }
+
+    /**
+     * Handle task delete
+     */
+    async handleTaskDelete(taskId) {
+        await this.deleteTask(taskId);
+    }
+
+    /**
+     * Handle task completion toggle
+     */
+    async handleTaskComplete(taskId, completed) {
+        await this.completeTask(taskId, completed);
+    }
+
+    /**
+     * Handle task created event
+     */
+    handleTaskCreated(task) {
+        // Refresh task list
+        this.loadTasksForManagement();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
+     * Handle task updated event
+     */
+    handleTaskUpdated(taskId, updates) {
+        // Refresh task list
+        this.loadTasksForManagement();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
+     * Handle task deleted event
+     */
+    handleTaskDeleted(taskId) {
+        // Refresh task list
+        this.loadTasksForManagement();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
+     * Handle task completed event
+     */
+    handleTaskCompleted(taskId, completed) {
+        // Update task in current list
+        const task = this.currentTasks.find(t => t.id === taskId);
+        if (task) {
+            task.completed = completed;
+            task.completedAt = completed ? new Date().toISOString() : null;
+        }
+        
+        this.applyTaskFilters();
+        this.updateTaskManagementDisplay();
+    }
+
+    /**
+     * Generate a simple task ID
+     */
+    generateTaskId() {
+        return `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
     /**

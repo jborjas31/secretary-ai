@@ -6,6 +6,7 @@
     <title>Secretary AI - Your Daily Schedule</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/task-management.css">
     <meta name="theme-color" content="#2c3e50">
     <meta name="description" content="AI-powered chronological daily task scheduler">
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
@@ -15,7 +16,10 @@
         <header class="header">
             <h1 class="title">Secretary AI</h1>
             <div class="current-time" id="currentTime"></div>
-            <button class="refresh-btn" id="refreshBtn" title="Refresh Schedule">🔄</button>
+            <div class="header-controls">
+                <button class="view-toggle-btn" id="viewToggleBtn" title="Toggle Task Management">📋</button>
+                <button class="refresh-btn" id="refreshBtn" title="Refresh Schedule">🔄</button>
+            </div>
         </header>
 
         <main class="main">
@@ -24,7 +28,8 @@
                 <span id="statusText">Loading your schedule...</span>
             </div>
 
-            <div class="schedule-container">
+            <!-- Schedule View (Default) -->
+            <div class="schedule-container" id="scheduleView">
                 <div class="schedule-header">
                     <h2>Your Schedule for Today</h2>
                     <div class="schedule-meta" id="scheduleMeta"></div>
@@ -38,6 +43,27 @@
                     <div class="empty-icon">✅</div>
                     <h3>All done for today!</h3>
                     <p>No more tasks scheduled for the rest of the day.</p>
+                </div>
+            </div>
+
+            <!-- Task Management View -->
+            <div class="task-management-container" id="taskManagementView" style="display: none;">
+                <div class="task-management-header">
+                    <h2>Task Management</h2>
+                    <div class="task-management-controls">
+                        <div id="searchBarContainer"></div>
+                        <div id="filterControlsContainer"></div>
+                    </div>
+                </div>
+                
+                <div class="task-sections-container" id="taskSectionsContainer">
+                    <!-- Task sections will be dynamically inserted here -->
+                </div>
+
+                <div class="task-management-empty" id="taskManagementEmpty" style="display: none;">
+                    <div class="empty-icon">📝</div>
+                    <h3>No tasks yet!</h3>
+                    <p>Click the + button to create your first task.</p>
                 </div>
             </div>
         </main>
@@ -102,6 +128,9 @@
 
     <!-- Scripts -->
     <script src="js/config.js"></script>
+    <script src="js/validation-utils.js"></script>
+    <script src="js/event-manager.js"></script>
+    <script src="js/ui-components.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/firestore.js"></script>
     <script src="js/task-data-service.js"></script>

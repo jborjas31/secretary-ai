@@ -37,6 +37,12 @@ body {
     z-index: 100;
 }
 
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .title {
     font-size: 1.8rem;
     font-weight: 600;
@@ -49,7 +55,7 @@ body {
     opacity: 0.9;
 }
 
-.refresh-btn {
+.refresh-btn, .view-toggle-btn {
     background: rgba(255,255,255,0.2);
     border: none;
     color: white;
@@ -68,6 +74,15 @@ body {
 .refresh-btn:hover {
     background: rgba(255,255,255,0.3);
     transform: rotate(180deg);
+}
+
+.view-toggle-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.1);
+}
+
+.view-toggle-btn.active {
+    background: rgba(255,255,255,0.4);
 }
 
 /* Main content */
