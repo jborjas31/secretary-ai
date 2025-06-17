@@ -67,13 +67,17 @@
                     <label for="modelSelect">AI Model:</label>
                     <select id="modelSelect">
                         <option value="anthropic/claude-3.5-sonnet" selected>Claude 3.5 Sonnet (Recommended - $3/1M tokens)</option>
+                        <option value="deepseek/deepseek-r1">DeepSeek R1 (Best Value - $0.05/1M input, $0.10/1M output)</option>
+                        <option value="deepseek/deepseek-r1-preview">DeepSeek R1 Premium (Top Reasoning - $0.45/1M input, $2.15/1M output)</option>
                         <option value="openai/gpt-4o-mini">GPT-4o Mini (Cost-effective - $0.15/1M tokens)</option>
+                        <option value="deepseek/deepseek-r1-distill-llama-70b">DeepSeek R1 Distilled 70B (Balanced - $0.10/1M input, $0.40/1M output)</option>
+                        <option value="deepseek/deepseek-r1:free">DeepSeek R1 (Free - Premium reasoning at no cost!)</option>
                         <option value="openai/gpt-4o">GPT-4o (Premium - $2.50/1M tokens)</option>
                         <option value="openrouter/auto">Auto Router (Smart selection - Variable cost)</option>
                         <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free)</option>
                         <option value="microsoft/phi-3-medium-128k-instruct:free">Phi-3 Medium (Free)</option>
                     </select>
-                    <small>With your $20 credits: Claude 3.5 Sonnet (~6,700 schedules), GPT-4o Mini (~133,000 schedules), or use free models without credits.</small>
+                    <small>With your $20 credits: Claude 3.5 Sonnet (~6,700 schedules), DeepSeek R1 (~200,000 schedules), DeepSeek R1 Premium (~9,300 schedules), GPT-4o Mini (~133,000 schedules), or use DeepSeek R1 Free for unlimited premium reasoning at no cost!</small>
                 </div>
                 <div class="setting-group">
                     <label for="refreshInterval">Auto Refresh (minutes):</label>

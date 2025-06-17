@@ -124,11 +124,11 @@ Is GitHub Pages: ${info.isGitHubPages}`;
                         'X-Title': 'Secretary AI Test'
                     },
                     body: JSON.stringify({
-                        model: 'meta-llama/llama-3.1-8b-instruct:free',
+                        model: 'deepseek/deepseek-r1',
                         messages: [
                             {
                                 role: 'user',
-                                content: 'Say "Hello from OpenRouter!" and nothing else.'
+                                content: 'Say "Hello from OpenRouter with DeepSeek R1!" and nothing else.'
                             }
                         ],
                         max_tokens: 50,
@@ -169,8 +169,7 @@ Is GitHub Pages: ${info.isGitHubPages}`;
                         'X-Title': 'Secretary AI Test'
                     },
                     body: JSON.stringify({
-                        model: 'meta-llama/llama-3.1-8b-instruct:free',
-                        models: ['meta-llama/llama-3.1-8b-instruct:free', 'microsoft/phi-3-medium-128k-instruct:free'],
+                        model: 'deepseek/deepseek-r1',
                         messages: [
                             {
                                 role: 'system',
@@ -178,12 +177,40 @@ Is GitHub Pages: ${info.isGitHubPages}`;
                             },
                             {
                                 role: 'user',
-                                content: 'Create a simple schedule with 2 tasks for this afternoon. Return JSON with "schedule" array containing objects with "time", "task", "duration", "priority", and "category" fields.'
+                                content: 'Create a simple schedule with 2 tasks for this afternoon. Return JSON with "schedule" array containing objects with "time", "task", "duration", "priority", and "category" fields. Test DeepSeek R1 structured output.'
                             }
                         ],
                         max_tokens: 500,
                         temperature: 0.3,
-                        response_format: { type: 'json_object' }
+                        response_format: { 
+                            type: 'json_schema',
+                            json_schema: {
+                                name: 'test_schedule',
+                                strict: true,
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        schedule: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    time: { type: 'string' },
+                                                    task: { type: 'string' },
+                                                    duration: { type: 'string' },
+                                                    priority: { type: 'string' },
+                                                    category: { type: 'string' }
+                                                },
+                                                required: ['time', 'task', 'duration', 'priority', 'category'],
+                                                additionalProperties: false
+                                            }
+                                        }
+                                    },
+                                    required: ['schedule'],
+                                    additionalProperties: false
+                                }
+                            }
+                        }
                     })
                 });
 

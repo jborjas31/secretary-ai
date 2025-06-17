@@ -8,7 +8,7 @@ class LLMService {
         this.apiKey = null;
         this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
         this.model = 'anthropic/claude-3.5-sonnet'; // Best for scheduling and reasoning
-        this.fallbackModels = ['openai/gpt-4o-mini', 'meta-llama/llama-3.1-8b-instruct:free']; // Premium to free fallback
+        this.fallbackModels = ['deepseek/deepseek-r1', 'openai/gpt-4o-mini', 'deepseek/deepseek-r1:free']; // Best value to good backup to best free fallback
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second
     }
@@ -429,20 +429,36 @@ Use these priorities: high, medium, low`;
     /**
      * Get estimated cost for a request (rough estimate)
      */
-    estimateCost(inputTokens, outputTokens) {
-        // Claude-3.5-Sonnet pricing (approximate)
-        const inputCostPer1K = 0.003;  // $3 per 1M tokens
-        const outputCostPer1K = 0.015; // $15 per 1M tokens
+    estimateCost(inputTokens, outputTokens, modelId = null) {
+        const currentModel = modelId || this.model;
         
-        const inputCost = (inputTokens / 1000) * inputCostPer1K;
-        const outputCost = (outputTokens / 1000) * outputCostPer1K;
+        // Pricing per 1000 tokens (input, output)
+        const modelPricing = {
+            'anthropic/claude-3.5-sonnet': { input: 0.003, output: 0.015 },
+            'deepseek/deepseek-r1': { input: 0.00005, output: 0.0001 },
+            'deepseek/deepseek-r1:free': { input: 0, output: 0 },
+            'deepseek/deepseek-r1-preview': { input: 0.00045, output: 0.00215 },
+            'deepseek/deepseek-r1-distill-llama-70b': { input: 0.0001, output: 0.0004 },
+            'openai/gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+            'openai/gpt-4o': { input: 0.0025, output: 0.01 },
+            'meta-llama/llama-3.1-8b-instruct:free': { input: 0, output: 0 },
+            'microsoft/phi-3-medium-128k-instruct:free': { input: 0, output: 0 }
+        };
+        
+        // Get pricing for the current model, fallback to Claude 3.5 Sonnet pricing
+        const pricing = modelPricing[currentModel] || modelPricing['anthropic/claude-3.5-sonnet'];
+        
+        const inputCost = (inputTokens / 1000) * pricing.input;
+        const outputCost = (outputTokens / 1000) * pricing.output;
         
         return {
             inputCost: inputCost,
             outputCost: outputCost,
             totalCost: inputCost + outputCost,
             inputTokens: inputTokens,
-            outputTokens: outputTokens
+            outputTokens: outputTokens,
+            model: currentModel,
+            pricing: pricing
         };
     }
 }
