@@ -849,7 +849,7 @@ class SecretaryApp {
                 this.currentTasks = await this.taskDataService.getAllTasks();
             } else {
                 // Fallback to TaskParser
-                const parsedTasks = await this.taskParser.parseTasks();
+                const parsedTasks = await this.taskParser.getCachedTasks();
                 this.currentTasks = this.flattenTaskSections(parsedTasks);
             }
             
