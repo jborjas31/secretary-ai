@@ -10,6 +10,8 @@ class SecretaryApp {
         this.llmService = new LLMService();
         this.firestoreService = new FirestoreService();
         this.storageService = new StorageService();
+        this.taskDataService = new TaskDataService();
+        this.scheduleDataService = new ScheduleDataService();
         
         // App state
         this.currentSchedule = null;
@@ -101,6 +103,20 @@ class SecretaryApp {
             try {
                 await this.firestoreService.initialize(Config.getFirebaseConfig());
                 console.log('✅ Firestore initialized');
+                
+                // Initialize new data services
+                this.taskDataService.initialize(this.firestoreService);
+                this.scheduleDataService.initialize(this.firestoreService, this.storageService);
+                
+                // Connect new services to StorageService
+                this.storageService.setTaskDataService(this.taskDataService);
+                this.storageService.setScheduleDataService(this.scheduleDataService);
+                
+                console.log('✅ Enhanced data services initialized');
+                
+                // Test migration on first run
+                await this.testTaskMigration();
+                
             } catch (error) {
                 console.warn('⚠️ Firestore initialization failed:', error);
             }
@@ -558,6 +574,167 @@ class SecretaryApp {
     showError(message, error) {
         console.error(message, error);
         this.showToast(message, 'error');
+    }
+
+    /**
+     * Test task migration and verify Phase 1 implementation
+     */
+    async testTaskMigration() {
+        try {
+            console.log('🧪 Testing Phase 1 migration...');
+            
+            // Check if TaskDataService is available
+            if (!this.taskDataService.isAvailable()) {
+                console.log('⚠️ TaskDataService not available - skipping migration test');
+                return;
+            }
+
+            // Check current migration status
+            const migrationStatus = await this.taskParser.checkMigrationStatus(this.taskDataService);
+            console.log('Migration Status:', migrationStatus);
+
+            if (!migrationStatus.migrated && migrationStatus.available) {
+                console.log('🔄 Starting initial task migration...');
+                
+                // Perform migration using StorageService helper
+                const migrationResult = await this.storageService.performTaskMigration(this.taskParser);
+                
+                if (migrationResult.migrated) {
+                    console.log('✅ Migration completed successfully!');
+                    console.log(`📊 Migrated ${migrationResult.taskCount || migrationResult.migrated} tasks`);
+                    
+                    // Verify migration by loading tasks from Firestore
+                    await this.verifyMigration();
+                } else {
+                    console.log('⚠️ Migration failed or was skipped:', migrationResult.reason || migrationResult.error);
+                }
+            } else if (migrationStatus.migrated) {
+                console.log(`✅ Migration already completed - ${migrationStatus.taskCount} tasks in Firestore`);
+                
+                // Still verify the system is working
+                await this.verifyMigration();
+            }
+
+            // Test backward compatibility
+            await this.testBackwardCompatibility();
+
+        } catch (error) {
+            console.error('❌ Error during migration test:', error);
+        }
+    }
+
+    /**
+     * Verify migration was successful
+     */
+    async verifyMigration() {
+        try {
+            console.log('🔍 Verifying migration...');
+
+            // Test TaskDataService
+            const allTasks = await this.taskDataService.getAllTasks();
+            console.log(`📋 Found ${allTasks.length} tasks in Firestore`);
+
+            // Test task retrieval by section
+            const todayTasks = await this.taskDataService.getTasksBySection('todayTasks');
+            const upcomingTasks = await this.taskDataService.getTasksBySection('upcomingTasks');
+            const undatedTasks = await this.taskDataService.getTasksBySection('undatedTasks');
+            
+            console.log(`📅 Task distribution:`, {
+                today: todayTasks.length,
+                upcoming: upcomingTasks.length,
+                undated: undatedTasks.length,
+                total: allTasks.length
+            });
+
+            // Test export functionality
+            const exportedTasks = await this.taskDataService.exportToTaskParserFormat();
+            console.log('📤 Export test successful - tasks structured for TaskParser');
+
+            // Test markdown export
+            const markdownContent = await this.taskParser.exportToMarkdown(this.taskDataService);
+            if (markdownContent) {
+                console.log('📝 Markdown export test successful');
+                console.log(`📏 Generated ${markdownContent.length} characters of markdown`);
+            }
+
+            console.log('✅ Migration verification completed successfully');
+            return true;
+        } catch (error) {
+            console.error('❌ Migration verification failed:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Test backward compatibility
+     */
+    async testBackwardCompatibility() {
+        try {
+            console.log('🔄 Testing backward compatibility...');
+
+            // Test that TaskParser still works with tasks.md
+            const originalTasks = await this.taskParser.loadAndParseTasks();
+            console.log('📖 Original TaskParser still works - loaded tasks from tasks.md');
+
+            // Test that LLMService still receives the expected format
+            const formattedTasks = this.taskParser.formatTasksForLLM(originalTasks);
+            console.log(`🤖 LLM format compatibility confirmed - ${formattedTasks.length} tasks formatted`);
+
+            // Test that StorageService still handles schedule saving
+            const testSchedule = {
+                schedule: [
+                    {
+                        time: "14:00",
+                        task: "Test backward compatibility",
+                        duration: "10 minutes",
+                        priority: "high",
+                        category: "test"
+                    }
+                ],
+                summary: "Test schedule for backward compatibility verification",
+                generatedAt: new Date().toISOString(),
+                mock: true
+            };
+
+            const testDate = new Date().toISOString().split('T')[0];
+            await this.storageService.saveSchedule(testDate + '-test', testSchedule);
+            console.log('💾 Schedule saving compatibility confirmed');
+
+            // Test enhanced schedule saving if available
+            if (this.scheduleDataService.isAvailable()) {
+                await this.storageService.saveScheduleWithHistory(testDate + '-enhanced-test', testSchedule);
+                console.log('📈 Enhanced schedule saving confirmed');
+            }
+
+            console.log('✅ Backward compatibility verified successfully');
+            return true;
+        } catch (error) {
+            console.error('❌ Backward compatibility test failed:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Get comprehensive system status for debugging
+     */
+    getSystemStatus() {
+        return {
+            app: {
+                initialized: true,
+                online: this.isOnline,
+                hasSchedule: !!this.currentSchedule
+            },
+            services: {
+                taskParser: !!this.taskParser,
+                llmService: !!this.llmService,
+                firestoreService: this.firestoreService?.isAvailable() || false,
+                storageService: !!this.storageService,
+                taskDataService: this.taskDataService?.isAvailable() || false,
+                scheduleDataService: this.scheduleDataService?.isAvailable() || false
+            },
+            storage: this.storageService?.getComprehensiveSyncStatus(),
+            settings: this.settings
+        };
     }
 }
 

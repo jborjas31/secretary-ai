@@ -1,21 +1,16 @@
 # Tasks and Responsibilities
 ## TO DO tasks for today
-- Pick up package from Correos.
-  - It's 5 minutes walking distance from apartment.
-- Critical: refill prepaid Movistar data sim card for internet router
+- 
 
 ## TO DO tasks without defined dates
-### Priority High:
-- Digitalize and organize my work notes
 ### Priority Medium:
+- Digitalize and organize my work notes
+### Priority Low:
 - Organize/curate my phone pictures
 - Organize my Google Drive
 - Organize my computer files 
 
 ## Upcoming important dates
-- June 16, Monday
-  - Pick up package from Correos post office.
-    - Reminder: Take passport with you to be able to pick up package.
 - June 20, Friday
   - Laser hair removal appointment at 7pm. Place is 10 mins walking distance from Ciempozuelos apartment.
 - June 23, Monday
@@ -36,6 +31,7 @@
   - Reminders:
     - Use nasal strips before going to sleep to keep nostrils open for better sleep.
 - Wake up
+  - Aim to wake up around 6:30-7:00am during the work week, 8-9am during the weekend.
   - Reminders:
     - Drink water and take caffeine + l-theanine pill right after waking up to get me awake.
 - Eat
@@ -57,7 +53,7 @@
 - Check email
 - Take medicines and supplements
   - CRITICAL that I take 2g Lysine daily
-- Prepare work lunch
+- Prepare work lunch the evening before the next work day
 - Journal
   - Log today's activities
 - Planning

@@ -299,6 +299,294 @@ class TaskParser {
         
         return this.parsedTasks;
     }
+
+    /**
+     * Migrate parsed tasks to Firestore using TaskDataService
+     */
+    async migrateToFirestore(taskDataService) {
+        if (!taskDataService || !taskDataService.isAvailable()) {
+            console.warn('TaskDataService not available for migration');
+            return { success: false, error: 'TaskDataService not available' };
+        }
+
+        try {
+            // Get latest parsed tasks
+            const tasks = await this.getCachedTasks();
+            
+            console.log('Starting migration of tasks to Firestore...');
+            const migrationResult = await taskDataService.migrateTasks(tasks);
+            
+            if (migrationResult.success) {
+                console.log(`Migration completed: ${migrationResult.migrated} tasks migrated`);
+            } else {
+                console.error('Migration failed:', migrationResult.error);
+            }
+            
+            return migrationResult;
+        } catch (error) {
+            console.error('Error during migration:', error);
+            return {
+                success: false,
+                error: error.message,
+                migrated: 0
+            };
+        }
+    }
+
+    /**
+     * Export tasks from Firestore back to tasks.md format
+     */
+    async exportToMarkdown(taskDataService) {
+        if (!taskDataService || !taskDataService.isAvailable()) {
+            console.warn('TaskDataService not available for export');
+            return null;
+        }
+
+        try {
+            // Get all tasks from Firestore
+            const allTasks = await taskDataService.getAllTasks();
+            
+            // Group tasks by section
+            const tasksBySection = {
+                todayTasks: [],
+                undatedTasks: [],
+                upcomingTasks: [],
+                dailyTasks: [],
+                weeklyTasks: [],
+                monthlyTasks: [],
+                yearlyTasks: []
+            };
+
+            // Sort tasks into sections
+            allTasks.forEach(task => {
+                const section = task.section || 'undatedTasks';
+                if (tasksBySection[section]) {
+                    tasksBySection[section].push(task);
+                }
+            });
+
+            // Generate markdown content
+            let markdown = '# Tasks and Responsibilities\n';
+
+            // Today's tasks
+            markdown += '## TO DO tasks for today\n';
+            if (tasksBySection.todayTasks.length > 0) {
+                tasksBySection.todayTasks.forEach(task => {
+                    markdown += `- ${task.text}\n`;
+                    markdown += this.formatTaskDetails(task);
+                });
+            } else {
+                markdown += '- \n';
+            }
+            markdown += '\n';
+
+            // Undated tasks
+            markdown += '## TO DO tasks without defined dates\n';
+            const undatedByPriority = this.groupTasksByPriority(tasksBySection.undatedTasks);
+            
+            ['high', 'medium', 'low'].forEach(priority => {
+                if (undatedByPriority[priority] && undatedByPriority[priority].length > 0) {
+                    markdown += `### Priority ${priority.charAt(0).toUpperCase() + priority.slice(1)}:\n`;
+                    undatedByPriority[priority].forEach(task => {
+                        markdown += `- ${task.text}\n`;
+                        markdown += this.formatTaskDetails(task);
+                    });
+                }
+            });
+            markdown += '\n';
+
+            // Upcoming tasks
+            markdown += '## Upcoming important dates\n';
+            if (tasksBySection.upcomingTasks.length > 0) {
+                // Sort by date
+                const sortedUpcoming = tasksBySection.upcomingTasks.sort((a, b) => {
+                    if (!a.date && !b.date) return 0;
+                    if (!a.date) return 1;
+                    if (!b.date) return -1;
+                    return new Date(a.date) - new Date(b.date);
+                });
+
+                sortedUpcoming.forEach(task => {
+                    if (task.date) {
+                        const date = new Date(task.date);
+                        const dateStr = date.toLocaleDateString('en-US', { 
+                            month: 'long', 
+                            day: 'numeric' 
+                        });
+                        const dayStr = date.toLocaleDateString('en-US', { weekday: 'long' });
+                        markdown += `- ${dateStr}, ${dayStr}\n`;
+                        markdown += `  - ${task.text}\n`;
+                    } else {
+                        markdown += `- ${task.text}\n`;
+                    }
+                    markdown += this.formatTaskDetails(task, '    ');
+                });
+            }
+            markdown += '\n';
+
+            // Daily, Weekly, Monthly, Yearly tasks
+            const sectionTitles = {
+                dailyTasks: 'Daily Tasks',
+                weeklyTasks: 'Weekly Tasks',
+                monthlyTasks: 'Monthly Tasks',
+                yearlyTasks: 'Yearly Tasks'
+            };
+
+            Object.keys(sectionTitles).forEach(sectionKey => {
+                markdown += `## ${sectionTitles[sectionKey]}\n`;
+                if (tasksBySection[sectionKey].length > 0) {
+                    tasksBySection[sectionKey].forEach(task => {
+                        markdown += `- ${task.text}\n`;
+                        markdown += this.formatTaskDetails(task);
+                    });
+                }
+                markdown += '\n';
+            });
+
+            console.log('Tasks exported to markdown format');
+            return markdown;
+        } catch (error) {
+            console.error('Error exporting tasks to markdown:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Format task details for markdown export
+     */
+    formatTaskDetails(task, indentPrefix = '  ') {
+        let details = '';
+
+        // Add sub-tasks
+        if (task.subTasks && task.subTasks.length > 0) {
+            task.subTasks.forEach(subTask => {
+                details += `${indentPrefix}- ${subTask}\n`;
+            });
+        }
+
+        // Add reminders
+        if (task.reminders && task.reminders.length > 0) {
+            task.reminders.forEach(reminder => {
+                const reminderText = typeof reminder === 'string' ? reminder : reminder.text;
+                details += `${indentPrefix}- Reminder: ${reminderText}\n`;
+            });
+        }
+
+        // Add other details
+        if (task.details && task.details.length > 0) {
+            task.details.forEach(detail => {
+                if (detail.type !== 'reminder') {
+                    const detailText = typeof detail === 'string' ? detail : detail.text;
+                    details += `${indentPrefix}- ${detailText}\n`;
+                }
+            });
+        }
+
+        return details;
+    }
+
+    /**
+     * Group tasks by priority
+     */
+    groupTasksByPriority(tasks) {
+        return tasks.reduce((groups, task) => {
+            const priority = task.priority || 'medium';
+            if (!groups[priority]) {
+                groups[priority] = [];
+            }
+            groups[priority].push(task);
+            return groups;
+        }, {});
+    }
+
+    /**
+     * Sync with Firestore - dual mode operation
+     */
+    async syncWithFirestore(taskDataService) {
+        if (!taskDataService || !taskDataService.isAvailable()) {
+            console.log('Firestore sync skipped - TaskDataService not available');
+            return { success: true, synced: false };
+        }
+
+        try {
+            // Check if tasks have been migrated
+            const allFirestoreTasks = await taskDataService.getAllTasks();
+            
+            if (allFirestoreTasks.length === 0) {
+                // No tasks in Firestore, perform migration
+                console.log('No tasks found in Firestore, performing initial migration...');
+                return await this.migrateToFirestore(taskDataService);
+            } else {
+                // Tasks exist in Firestore, sync if needed
+                console.log(`Found ${allFirestoreTasks.length} tasks in Firestore`);
+                
+                // For now, we'll keep tasks.md as primary source in dual mode
+                // Future enhancement: compare timestamps and sync changes
+                return { 
+                    success: true, 
+                    synced: true,
+                    firestoreTasks: allFirestoreTasks.length,
+                    message: 'Firestore tasks loaded, dual mode active'
+                };
+            }
+        } catch (error) {
+            console.error('Error syncing with Firestore:', error);
+            return {
+                success: false,
+                error: error.message,
+                synced: false
+            };
+        }
+    }
+
+    /**
+     * Get tasks from Firestore (for dual mode)
+     */
+    async getTasksFromFirestore(taskDataService) {
+        if (!taskDataService || !taskDataService.isAvailable()) {
+            return null;
+        }
+
+        try {
+            const firestoreTasks = await taskDataService.exportToTaskParserFormat();
+            console.log('Tasks loaded from Firestore');
+            return firestoreTasks;
+        } catch (error) {
+            console.error('Error loading tasks from Firestore:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Check migration status
+     */
+    async checkMigrationStatus(taskDataService) {
+        if (!taskDataService || !taskDataService.isAvailable()) {
+            return {
+                migrated: false,
+                available: false,
+                taskCount: 0
+            };
+        }
+
+        try {
+            const firestoreTasks = await taskDataService.getAllTasks();
+            return {
+                migrated: firestoreTasks.length > 0,
+                available: true,
+                taskCount: firestoreTasks.length,
+                lastSync: taskDataService.getSyncStatus().lastSync
+            };
+        } catch (error) {
+            console.error('Error checking migration status:', error);
+            return {
+                migrated: false,
+                available: true,
+                taskCount: 0,
+                error: error.message
+            };
+        }
+    }
 }
 
 // Export for use in other modules

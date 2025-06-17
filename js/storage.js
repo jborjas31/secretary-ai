@@ -435,6 +435,294 @@ class StorageService {
         console.log(`Imported ${importedCount} items from backup`);
         return importedCount;
     }
+
+    /**
+     * Set TaskDataService for task coordination
+     */
+    setTaskDataService(taskDataService) {
+        this.taskDataService = taskDataService;
+        console.log('TaskDataService connected to StorageService');
+    }
+
+    /**
+     * Set ScheduleDataService for enhanced schedule management
+     */
+    setScheduleDataService(scheduleDataService) {
+        this.scheduleDataService = scheduleDataService;
+        console.log('ScheduleDataService connected to StorageService');
+    }
+
+    /**
+     * Enhanced schedule saving with history tracking
+     */
+    async saveScheduleWithHistory(date, scheduleData, completionData = null) {
+        try {
+            // Use enhanced ScheduleDataService if available
+            if (this.scheduleDataService) {
+                return await this.scheduleDataService.saveSchedule(date, scheduleData, completionData);
+            } else {
+                // Fallback to existing method
+                return await this.saveSchedule(date, scheduleData);
+            }
+        } catch (error) {
+            console.error('Error saving schedule with history:', error);
+            // Fallback to basic save
+            return await this.saveSchedule(date, scheduleData);
+        }
+    }
+
+    /**
+     * Enhanced schedule loading with history fallback
+     */
+    async loadScheduleWithHistory(date) {
+        try {
+            // Use enhanced ScheduleDataService if available
+            if (this.scheduleDataService) {
+                return await this.scheduleDataService.loadSchedule(date);
+            } else {
+                // Fallback to existing method
+                return await this.loadSchedule(date);
+            }
+        } catch (error) {
+            console.error('Error loading schedule with history:', error);
+            // Fallback to basic load
+            return await this.loadSchedule(date);
+        }
+    }
+
+    /**
+     * Save task to Firestore using TaskDataService
+     */
+    async saveTask(taskData) {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.warn('TaskDataService not available, task not saved to cloud');
+            return null;
+        }
+
+        try {
+            return await this.taskDataService.createTask(taskData);
+        } catch (error) {
+            console.error('Error saving task:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update task in Firestore
+     */
+    async updateTask(taskId, updates) {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.warn('TaskDataService not available, task not updated in cloud');
+            return null;
+        }
+
+        try {
+            return await this.taskDataService.updateTask(taskId, updates);
+        } catch (error) {
+            console.error('Error updating task:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete task from Firestore
+     */
+    async deleteTask(taskId) {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.warn('TaskDataService not available, task not deleted from cloud');
+            return false;
+        }
+
+        try {
+            return await this.taskDataService.deleteTask(taskId);
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get tasks from Firestore
+     */
+    async getTasks(filters = {}) {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.warn('TaskDataService not available, returning empty array');
+            return [];
+        }
+
+        try {
+            return await this.taskDataService.getTasks(filters);
+        } catch (error) {
+            console.error('Error getting tasks:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Update task completion and sync with schedule
+     */
+    async updateTaskCompletion(taskId, completed, actualDuration = null, date = null) {
+        try {
+            // Update task in TaskDataService
+            if (this.taskDataService && this.taskDataService.isAvailable()) {
+                await this.taskDataService.updateTask(taskId, {
+                    completed: completed,
+                    actualDuration: actualDuration,
+                    completedAt: completed ? new Date().toISOString() : null
+                });
+            }
+
+            // Update schedule completion if date provided
+            if (date && this.scheduleDataService) {
+                await this.scheduleDataService.updateTaskCompletion(date, taskId, completed, actualDuration);
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error updating task completion:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Sync all data services
+     */
+    async syncAllServices() {
+        const syncResults = {
+            timestamp: new Date().toISOString(),
+            firestore: false,
+            tasks: false,
+            schedules: false,
+            errors: []
+        };
+
+        try {
+            // Sync existing Firestore data
+            if (this.firestoreService && this.firestoreService.isAvailable()) {
+                await this.syncPendingData();
+                syncResults.firestore = true;
+            }
+
+            // Sync TaskDataService
+            if (this.taskDataService && this.taskDataService.isAvailable()) {
+                await this.taskDataService.syncWithFirestore();
+                syncResults.tasks = true;
+            }
+
+            // Sync ScheduleDataService (handled by existing Firestore sync)
+            if (this.scheduleDataService) {
+                syncResults.schedules = true;
+            }
+
+            console.log('All services synced successfully');
+        } catch (error) {
+            console.error('Error during service sync:', error);
+            syncResults.errors.push(error.message);
+        }
+
+        return syncResults;
+    }
+
+    /**
+     * Get comprehensive sync status
+     */
+    getComprehensiveSyncStatus() {
+        const basicStatus = this.getSyncStatus();
+        
+        return {
+            ...basicStatus,
+            services: {
+                firestore: this.firestoreService ? this.firestoreService.isAvailable() : false,
+                taskData: this.taskDataService ? this.taskDataService.isAvailable() : false,
+                scheduleData: this.scheduleDataService ? this.scheduleDataService.isAvailable() : false
+            },
+            taskDataStatus: this.taskDataService ? this.taskDataService.getSyncStatus() : null,
+            scheduleDataStatus: this.scheduleDataService ? this.scheduleDataService.getServiceStatus() : null
+        };
+    }
+
+    /**
+     * Initialize all data services
+     */
+    async initializeDataServices(firestoreService) {
+        try {
+            // Initialize TaskDataService if not already done
+            if (this.taskDataService && !this.taskDataService.isAvailable()) {
+                this.taskDataService.initialize(firestoreService);
+            }
+
+            // Initialize ScheduleDataService if not already done
+            if (this.scheduleDataService && !this.scheduleDataService.isAvailable()) {
+                this.scheduleDataService.initialize(firestoreService, this);
+            }
+
+            console.log('All data services initialized');
+            return true;
+        } catch (error) {
+            console.error('Error initializing data services:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Migration helper - check and perform task migration
+     */
+    async performTaskMigration(taskParser) {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.log('Task migration skipped - TaskDataService not available');
+            return { migrated: false, reason: 'TaskDataService not available' };
+        }
+
+        try {
+            // Check if migration is needed
+            const migrationStatus = await taskParser.checkMigrationStatus(this.taskDataService);
+            
+            if (!migrationStatus.migrated) {
+                console.log('Starting task migration...');
+                const migrationResult = await taskParser.migrateToFirestore(this.taskDataService);
+                
+                if (migrationResult.success) {
+                    // Save migration status
+                    this.setLocal('migration-status', {
+                        completed: true,
+                        timestamp: new Date().toISOString(),
+                        tasksMigrated: migrationResult.migrated
+                    });
+                }
+                
+                return migrationResult;
+            } else {
+                console.log(`Migration already completed - ${migrationStatus.taskCount} tasks in Firestore`);
+                return { 
+                    migrated: true, 
+                    taskCount: migrationStatus.taskCount,
+                    alreadyCompleted: true 
+                };
+            }
+        } catch (error) {
+            console.error('Error during task migration:', error);
+            return { 
+                migrated: false, 
+                error: error.message 
+            };
+        }
+    }
+
+    /**
+     * Export enhanced backup data
+     */
+    exportEnhancedData() {
+        const basicData = this.exportData();
+        
+        return {
+            ...basicData,
+            services: {
+                taskDataAvailable: this.taskDataService ? this.taskDataService.isAvailable() : false,
+                scheduleDataAvailable: this.scheduleDataService ? this.scheduleDataService.isAvailable() : false,
+                migrationStatus: this.getLocal('migration-status')
+            }
+        };
+    }
 }
 
 // Export for use in other modules

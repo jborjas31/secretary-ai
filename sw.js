@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretary-ai-v3'; // Updated version for new cache
+const CACHE_NAME = 'secretary-ai-v4'; // Updated version for Phase 1 implementation
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -8,6 +8,8 @@ const STATIC_ASSETS = [
     './js/config.js',
     './js/storage.js',
     './js/firestore.js',
+    './js/task-data-service.js',
+    './js/schedule-data-service.js',
     './js/task-parser.js',
     './js/llm-service.js'
 ];
