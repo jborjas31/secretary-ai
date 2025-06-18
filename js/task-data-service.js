@@ -303,6 +303,15 @@ class TaskDataService {
             console.log('🔍 Checking for existing tasks...');
             const existingTasks = await this.getAllTasks();
             const existingTaskIds = new Set(existingTasks.map(t => t.id));
+            
+            // Also create a map of existing tasks by normalized text content to catch duplicates
+            const existingTasksByContent = new Map();
+            existingTasks.forEach(task => {
+                const normalizedText = task.text.trim().toLowerCase();
+                const key = `${task.section}-${normalizedText}`;
+                existingTasksByContent.set(key, task);
+            });
+            
             console.log(`📊 Found ${existingTasks.length} existing tasks in Firestore`);
 
             // Get batch from Firestore modules
@@ -331,10 +340,21 @@ class TaskDataService {
 
                 for (const task of sectionTasks) {
                     try {
-                        // Skip if task already exists
+                        // Skip if task already exists by ID
                         if (existingTaskIds.has(task.id)) {
                             migrationResults.skipped++;
                             migrationResults.sections[sectionName].skipped++;
+                            console.log(`⏭️ Skipping task (ID match): ${task.text}`);
+                            continue;
+                        }
+                        
+                        // Also check for duplicate by content
+                        const normalizedText = task.text.trim().toLowerCase();
+                        const contentKey = `${sectionName}-${normalizedText}`;
+                        if (existingTasksByContent.has(contentKey)) {
+                            migrationResults.skipped++;
+                            migrationResults.sections[sectionName].skipped++;
+                            console.log(`⏭️ Skipping task (content match): ${task.text}`);
                             continue;
                         }
 
@@ -491,6 +511,84 @@ class TaskDataService {
         } catch (error) {
             console.error('Error during task sync:', error);
             return false;
+        }
+    }
+    
+    /**
+     * Remove duplicate tasks from Firestore
+     * Keeps the oldest task (by createdAt) when duplicates are found
+     */
+    async deduplicateTasks() {
+        if (!this.isAvailable()) {
+            console.warn('Cannot deduplicate - TaskDataService not available');
+            return { success: false, error: 'Service not available' };
+        }
+
+        try {
+            console.log('🧹 Starting task deduplication...');
+            
+            // Get all tasks
+            const allTasks = await this.getAllTasks();
+            console.log(`📊 Total tasks before deduplication: ${allTasks.length}`);
+            
+            // Group tasks by normalized content
+            const taskGroups = new Map();
+            
+            allTasks.forEach(task => {
+                const normalizedText = task.text.trim().toLowerCase();
+                const key = `${task.section}-${normalizedText}`;
+                
+                if (!taskGroups.has(key)) {
+                    taskGroups.set(key, []);
+                }
+                taskGroups.get(key).push(task);
+            });
+            
+            // Find and remove duplicates
+            const duplicatesToDelete = [];
+            let duplicateCount = 0;
+            
+            taskGroups.forEach((tasks, key) => {
+                if (tasks.length > 1) {
+                    console.log(`🔍 Found ${tasks.length} duplicates for: ${tasks[0].text}`);
+                    duplicateCount += tasks.length - 1;
+                    
+                    // Sort by createdAt to keep the oldest
+                    tasks.sort((a, b) => {
+                        const dateA = new Date(a.createdAt || '2000-01-01');
+                        const dateB = new Date(b.createdAt || '2000-01-01');
+                        return dateA - dateB;
+                    });
+                    
+                    // Mark all but the first (oldest) for deletion
+                    for (let i = 1; i < tasks.length; i++) {
+                        duplicatesToDelete.push(tasks[i].id);
+                    }
+                }
+            });
+            
+            // Delete duplicates
+            if (duplicatesToDelete.length > 0) {
+                console.log(`🗑️ Deleting ${duplicatesToDelete.length} duplicate tasks...`);
+                
+                for (const taskId of duplicatesToDelete) {
+                    await this.deleteTask(taskId);
+                }
+                
+                console.log(`✅ Deduplication complete! Removed ${duplicateCount} duplicates`);
+            } else {
+                console.log('✅ No duplicates found!');
+            }
+            
+            return {
+                success: true,
+                totalTasks: allTasks.length,
+                duplicatesRemoved: duplicateCount,
+                remainingTasks: allTasks.length - duplicateCount
+            };
+        } catch (error) {
+            console.error('Error during deduplication:', error);
+            return { success: false, error: error.message };
         }
     }
 }

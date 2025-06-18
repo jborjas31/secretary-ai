@@ -86,6 +86,11 @@ class SecretaryApp {
                 console.error('Failed to cleanup API keys:', error);
             });
             
+            // Run deduplication to clean up any duplicate tasks
+            this.deduplicateTasksOnStartup().catch(error => {
+                console.error('Failed to deduplicate tasks:', error);
+            });
+            
             console.log('✅ Secretary AI initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize Secretary AI:', error);
@@ -662,23 +667,29 @@ class SecretaryApp {
             // Get last migration timestamp from localStorage
             const lastMigration = localStorage.getItem('lastTaskMigrationTimestamp');
             
-            // If never migrated, migration is needed
-            if (!lastMigration) {
-                return true;
-            }
-            
             // Check if we have any tasks in Firestore
             const migrationStatus = await this.taskParser.checkMigrationStatus(this.taskDataService);
-            if (!migrationStatus.migrated || migrationStatus.taskCount === 0) {
+            
+            // Only migrate if:
+            // 1. Never migrated before AND
+            // 2. Firestore has NO tasks at all
+            if (!lastMigration && migrationStatus.taskCount === 0) {
+                console.log('First-time migration needed - no tasks in Firestore');
                 return true;
             }
             
-            // For now, we'll trust that if migration was completed, we don't need to re-run it
-            // unless there are missing tasks (handled in testTaskMigration)
+            // If we have any tasks in Firestore, don't migrate
+            // This prevents re-migration even if tasks.md has new items
+            if (migrationStatus.taskCount > 0) {
+                return false;
+            }
+            
+            // Migration is not needed if we've already migrated
             return false;
         } catch (error) {
             console.error('Error checking migration status:', error);
-            return true; // Err on the side of caution
+            // If there's an error, assume migration is NOT needed to prevent duplicates
+            return false;
         }
     }
 
@@ -1501,6 +1512,49 @@ class SecretaryApp {
             }
         } catch (error) {
             console.error('Error during API key cleanup:', error);
+        }
+    }
+    
+    /**
+     * Run task deduplication on startup
+     * Only runs if deduplication hasn't been performed recently
+     */
+    async deduplicateTasksOnStartup() {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.log('TaskDataService not available, skipping deduplication');
+            return;
+        }
+
+        try {
+            // Check if we've already run deduplication recently
+            const lastDedup = localStorage.getItem('lastTaskDeduplicationTimestamp');
+            if (lastDedup) {
+                const lastDedupDate = new Date(lastDedup);
+                const hoursSinceDedup = (Date.now() - lastDedupDate.getTime()) / (1000 * 60 * 60);
+                
+                // Only run deduplication once every 24 hours
+                if (hoursSinceDedup < 24) {
+                    console.log('Deduplication was run recently, skipping');
+                    return;
+                }
+            }
+            
+            console.log('Running task deduplication...');
+            const result = await this.taskDataService.deduplicateTasks();
+            
+            if (result.success && result.duplicatesRemoved > 0) {
+                console.log(`✅ Removed ${result.duplicatesRemoved} duplicate tasks`);
+                // Update the task management view if it's visible
+                if (this.currentView === 'task-management') {
+                    await this.loadTasksForManagement();
+                    this.updateTaskManagementDisplay();
+                }
+            }
+            
+            // Save timestamp
+            localStorage.setItem('lastTaskDeduplicationTimestamp', new Date().toISOString());
+        } catch (error) {
+            console.error('Error during task deduplication:', error);
         }
     }
 }

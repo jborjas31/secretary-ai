@@ -5,16 +5,36 @@
 
 class TaskParser {
     constructor() {
-        this.taskIdCounter = 1;
         this.parsedTasks = null;
         this.lastParsed = null;
     }
 
     /**
-     * Generate a unique ID for a task
+     * Generate a stable ID for a task based on its content
+     * This ensures the same task always gets the same ID across parses
      */
-    generateTaskId(category, index) {
-        return `${category}-${index}-${Date.now()}-${this.taskIdCounter++}`;
+    generateTaskId(category, taskText) {
+        // Create a stable ID by hashing category + task text
+        const normalizedText = taskText.trim().toLowerCase()
+            .replace(/[^\w\s]/g, '') // Remove special characters
+            .replace(/\s+/g, ' '); // Normalize whitespace
+        
+        const baseString = `${category}-${normalizedText}`;
+        const hash = this.simpleHash(baseString);
+        return `${category}-${hash}`;
+    }
+    
+    /**
+     * Simple hash function to create consistent IDs
+     */
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash).toString(36); // Convert to base36 for shorter string
     }
 
     /**
@@ -163,7 +183,7 @@ class TaskParser {
                 const { details, subTasks, nextIndex } = this.parseTaskDetails(lines, i);
                 
                 const task = {
-                    id: this.generateTaskId(currentSection, tasks[currentSection].length),
+                    id: this.generateTaskId(currentSection, taskText),
                     text: taskText,
                     section: currentSection,
                     priority: currentPriority || 'medium',
