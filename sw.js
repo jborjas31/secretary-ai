@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretary-ai-v11'; // Performance fix: batch migration operations
+const CACHE_NAME = 'secretary-ai-v13'; // Optimized task migration logic
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -15,7 +15,8 @@ const STATIC_ASSETS = [
     './js/task-data-service.js',
     './js/schedule-data-service.js',
     './js/task-parser.js',
-    './js/llm-service.js'
+    './js/llm-service.js',
+    './tasks.md'
 ];
 
 // Install event - cache static assets

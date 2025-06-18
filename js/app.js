@@ -645,24 +645,57 @@ class SecretaryApp {
     }
 
     /**
+     * Check if migration is needed based on timestamps
+     */
+    async isMigrationNeeded() {
+        try {
+            // Get last migration timestamp from localStorage
+            const lastMigration = localStorage.getItem('lastTaskMigrationTimestamp');
+            
+            // If never migrated, migration is needed
+            if (!lastMigration) {
+                return true;
+            }
+            
+            // Check if we have any tasks in Firestore
+            const migrationStatus = await this.taskParser.checkMigrationStatus(this.taskDataService);
+            if (!migrationStatus.migrated || migrationStatus.taskCount === 0) {
+                return true;
+            }
+            
+            // For now, we'll trust that if migration was completed, we don't need to re-run it
+            // unless there are missing tasks (handled in testTaskMigration)
+            return false;
+        } catch (error) {
+            console.error('Error checking migration status:', error);
+            return true; // Err on the side of caution
+        }
+    }
+
+    /**
      * Test task migration and verify Phase 1 implementation
      */
     async testTaskMigration() {
         try {
-            console.log('🧪 Testing Phase 1 migration...');
-            
             // Check if TaskDataService is available
             if (!this.taskDataService.isAvailable()) {
-                console.log('⚠️ TaskDataService not available - skipping migration test');
+                console.log('⚠️ TaskDataService not available - skipping migration');
                 return;
             }
 
             // Check if migration is already in progress
             if (this.migrationInProgress) {
-                console.log('⏳ Migration already in progress, skipping...');
+                return; // Silently skip
+            }
+
+            // Check if migration is needed
+            const migrationNeeded = await this.isMigrationNeeded();
+            if (!migrationNeeded) {
+                // Migration already completed, no need to log anything
                 return;
             }
             
+            console.log('🧪 Checking task migration status...');
             this.migrationInProgress = true;
 
             // Check current migration status
@@ -679,8 +712,14 @@ class SecretaryApp {
                     console.log('✅ Migration completed successfully!');
                     console.log(`📊 Migrated ${migrationResult.taskCount || migrationResult.migrated} tasks`);
                     
+                    // Save migration timestamp
+                    localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
+                    
                     // Verify migration by loading tasks from Firestore
                     await this.verifyMigration();
+                    
+                    // Show success message briefly
+                    this.setStatus('online', 'Tasks synced successfully');
                 } else {
                     console.log('⚠️ Migration failed or was skipped:', migrationResult.reason || migrationResult.error);
                 }
@@ -705,18 +744,28 @@ class SecretaryApp {
                     if (migrationResult.success) {
                         console.log('✅ Re-migration completed successfully!');
                         console.log(`📊 Total tasks after re-migration: ${migrationResult.migrated} new, ${migrationResult.skipped} skipped`);
+                        
+                        // Save migration timestamp
+                        localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
+                        
                         this.setStatus('online', 'Task migration completed');
                     } else {
                         this.setStatus('offline', 'Migration failed - some features may be limited');
                     }
+                } else {
+                    // Migration is complete and up-to-date, save timestamp
+                    localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
                 }
                 
                 // Still verify the system is working
                 await this.verifyMigration();
             }
 
-            // Test backward compatibility
-            await this.testBackwardCompatibility();
+            // Only test backward compatibility during actual migration
+            if (migrationStatus.available && (!migrationStatus.migrated || 
+                (totalTasksInMd && totalTasksInMd > migrationStatus.taskCount))) {
+                await this.testBackwardCompatibility();
+            }
 
         } catch (error) {
             console.error('❌ Error during migration test:', error);
@@ -730,44 +779,19 @@ class SecretaryApp {
      */
     async verifyMigration() {
         try {
-            console.log('🔍 Verifying migration...');
-
-            // Test TaskDataService
+            // Test TaskDataService silently
             const allTasks = await this.taskDataService.getAllTasks();
-            console.log(`📋 Found ${allTasks.length} tasks in Firestore`);
-
-            // Test task retrieval by section
-            const todayTasks = await this.taskDataService.getTasksBySection('todayTasks');
-            const upcomingTasks = await this.taskDataService.getTasksBySection('upcomingTasks');
-            const dailyTasks = await this.taskDataService.getTasksBySection('dailyTasks');
-            const weeklyTasks = await this.taskDataService.getTasksBySection('weeklyTasks');
-            const monthlyTasks = await this.taskDataService.getTasksBySection('monthlyTasks');
-            const yearlyTasks = await this.taskDataService.getTasksBySection('yearlyTasks');
-            const undatedTasks = await this.taskDataService.getTasksBySection('undatedTasks');
             
-            console.log(`📅 Task distribution:`, {
-                today: todayTasks.length,
-                upcoming: upcomingTasks.length,
-                daily: dailyTasks.length,
-                weekly: weeklyTasks.length,
-                monthly: monthlyTasks.length,
-                yearly: yearlyTasks.length,
-                undated: undatedTasks.length,
-                total: allTasks.length
-            });
-
-            // Test export functionality
-            const exportedTasks = await this.taskDataService.exportToTaskParserFormat();
-            console.log('📤 Export test successful - tasks structured for TaskParser');
-
-            // Test markdown export
-            const markdownContent = await this.taskParser.exportToMarkdown(this.taskDataService);
-            if (markdownContent) {
-                console.log('📝 Markdown export test successful');
-                console.log(`📏 Generated ${markdownContent.length} characters of markdown`);
+            // Only log if there's an issue
+            if (allTasks.length === 0) {
+                console.warn('⚠️ No tasks found in Firestore after migration');
+                return false;
             }
 
-            console.log('✅ Migration verification completed successfully');
+            // Basic functionality test - no logging unless error
+            await this.taskDataService.getTasksBySection('todayTasks');
+            await this.taskDataService.exportToTaskParserFormat();
+            
             return true;
         } catch (error) {
             console.error('❌ Migration verification failed:', error);
@@ -780,16 +804,12 @@ class SecretaryApp {
      */
     async testBackwardCompatibility() {
         try {
-            console.log('🔄 Testing backward compatibility...');
-
-            // Test that TaskParser still works with tasks.md
+            // Silently test that TaskParser still works with tasks.md
             const originalTasks = await this.taskParser.loadAndParseTasks();
-            console.log('📖 Original TaskParser still works - loaded tasks from tasks.md');
-
+            
             // Test that LLMService still receives the expected format
             const formattedTasks = this.taskParser.formatTasksForLLM(originalTasks);
-            console.log(`🤖 LLM format compatibility confirmed - ${formattedTasks.length} tasks formatted`);
-
+            
             // Test that StorageService still handles schedule saving
             const testSchedule = {
                 schedule: [
@@ -808,15 +828,12 @@ class SecretaryApp {
 
             const testDate = new Date().toISOString().split('T')[0];
             await this.storageService.saveSchedule(testDate + '-test', testSchedule);
-            console.log('💾 Schedule saving compatibility confirmed');
 
             // Test enhanced schedule saving if available
             if (this.scheduleDataService.isAvailable()) {
                 await this.storageService.saveScheduleWithHistory(testDate + '-enhanced-test', testSchedule);
-                console.log('📈 Enhanced schedule saving confirmed');
             }
 
-            console.log('✅ Backward compatibility verified successfully');
             return true;
         } catch (error) {
             console.error('❌ Backward compatibility test failed:', error);
@@ -1347,23 +1364,6 @@ class SecretaryApp {
         await this.completeTask(taskId, completed);
     }
 
-    /**
-     * Handle task created event
-     */
-    handleTaskCreated(task) {
-        // Refresh task list
-        this.loadTasksForManagement();
-        this.updateTaskManagementDisplay();
-    }
-
-    /**
-     * Handle task updated event
-     */
-    handleTaskUpdated(taskId, updates) {
-        // Refresh task list
-        this.loadTasksForManagement();
-        this.updateTaskManagementDisplay();
-    }
 
     /**
      * Handle task created event
