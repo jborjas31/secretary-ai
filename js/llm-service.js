@@ -7,7 +7,7 @@ class LLMService {
     constructor() {
         this.apiKey = null;
         this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-        this.model = 'deepseek/deepseek-r1'; // Best value with excellent reasoning
+        this.model = Config.APP_CONFIG.openrouter.defaultModel || 'anthropic/claude-3.5-sonnet';
         this.fallbackModels = ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o-mini', 'deepseek/deepseek-r1:free']; // Premium fallback to good backup to best free fallback
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second
