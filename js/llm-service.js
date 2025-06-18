@@ -7,8 +7,16 @@ class LLMService {
     constructor() {
         this.apiKey = null;
         this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-        this.model = APP_CONFIG.openrouter.defaultModel || 'anthropic/claude-3.5-sonnet';
-        this.fallbackModels = ['anthropic/claude-3.5-sonnet', 'openai/gpt-4o-mini', 'deepseek/deepseek-r1:free']; // Premium fallback to good backup to best free fallback
+        this.model = APP_CONFIG.openrouter.defaultModel || 'deepseek/deepseek-r1';
+        this.fallbackModels = [
+            'deepseek/deepseek-r1-preview',      // Top reasoning ($0.45/$2.15 per 1M)
+            'anthropic/claude-3.5-sonnet',       // Excellent general purpose ($3/1M)
+            'openai/gpt-4o',                     // Premium OpenAI ($2.50/1M)
+            'deepseek/deepseek-r1-distill-llama-70b', // Balanced 70B model ($0.10/$0.40)
+            'openai/gpt-4o-mini',                // Cost-effective but capable ($0.15/1M)
+            'deepseek/deepseek-r1:free',         // Same model, free tier
+            'meta-llama/llama-3.1-8b-instruct:free'  // Emergency free fallback
+        ];
         this.maxRetries = 3;
         this.retryDelay = 1000; // 1 second
     }
