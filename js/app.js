@@ -55,6 +55,11 @@ class SecretaryApp {
         try {
             console.log('🚀 Initializing Secretary AI...');
             
+            // Check required dependencies
+            if (!window.ValidationUtils) {
+                throw new Error('ValidationUtils not loaded. Please refresh the page.');
+            }
+            
             // Initialize UI
             this.initializeUI();
             
@@ -185,7 +190,7 @@ class SecretaryApp {
             console.error('Error loading settings:', error);
             this.settings = {
                 openrouterApiKey: '',
-                selectedModel: 'anthropic/claude-3.5-sonnet',
+                selectedModel: 'deepseek/deepseek-r1',
                 refreshInterval: 30,
                 notifications: true,
                 theme: 'light'
@@ -549,7 +554,7 @@ class SecretaryApp {
         // Populate current settings
         if (this.settings) {
             this.elements.openrouterKey.value = this.settings.openrouterApiKey || '';
-            this.elements.modelSelect.value = this.settings.selectedModel || 'anthropic/claude-3.5-sonnet';
+            this.elements.modelSelect.value = this.settings.selectedModel || 'deepseek/deepseek-r1';
             this.elements.refreshInterval.value = this.settings.refreshInterval || 30;
         }
         
@@ -1176,20 +1181,27 @@ class SecretaryApp {
      */
     async handleTaskFormSubmit(mode, taskData) {
         try {
+            // Check if ValidationUtils is available
+            if (!window.ValidationUtils) {
+                console.error('ValidationUtils not available');
+                this.showToast('Validation system not loaded. Please refresh the page.', 'error');
+                return;
+            }
+
             // Validate task data
-            const validation = ValidationUtils.validateTask(taskData);
+            const validation = window.ValidationUtils.validateTask(taskData);
             if (!validation.isValid) {
-                const errorMessage = ValidationUtils.formatValidationErrors(validation.errors);
+                const errorMessage = window.ValidationUtils.formatValidationErrors(validation.errors);
                 this.showToast(errorMessage, 'error');
                 return;
             }
 
             // Sanitize task data
-            const sanitizedData = ValidationUtils.sanitizeTaskData(taskData);
+            const sanitizedData = window.ValidationUtils.sanitizeTaskData(taskData);
 
             // Parse natural language date if provided
             if (sanitizedData.date) {
-                const dateResult = ValidationUtils.parseNaturalDate(sanitizedData.date);
+                const dateResult = window.ValidationUtils.parseNaturalDate(sanitizedData.date);
                 if (dateResult.isValid) {
                     sanitizedData.date = dateResult.formatted;
                 } else {
