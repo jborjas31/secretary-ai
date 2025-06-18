@@ -209,9 +209,10 @@ users/default-user/
 
 **GitHub Pages**: App auto-detects subdirectory deployment and adjusts all paths accordingly. No configuration needed.
 
-**Firebase Setup**: Update `FIREBASE_CONFIG` in config.js with your project credentials. Single-user setup uses open security rules.
+**Firebase Setup**: Update `FIREBASE_CONFIG` in config.js with your project credentials. 
+⚠️ **SECURITY WARNING**: By default, this app assumes open security rules for simplicity. You MUST secure your Firestore database with proper rules before production use. See the security section below.
 
-**API Key Management**: OpenRouter keys stored in browser localStorage - never commit to repository.
+**API Key Management**: OpenRouter keys are stored ONLY in browser localStorage - never synced to cloud. This prevents API key theft if your Firestore is compromised.
 
 ## File Dependencies
 
@@ -298,9 +299,45 @@ npm run test
 
 **GitHub Pages**: App auto-detects subdirectory deployment and adjusts all paths accordingly. No configuration needed.
 
-**Firebase Setup**: Update `FIREBASE_CONFIG` in config.js with your project credentials. Single-user setup uses open security rules.
+**Firebase Setup**: Update `FIREBASE_CONFIG` in config.js with your project credentials. 
+⚠️ **SECURITY WARNING**: By default, this app assumes open security rules for simplicity. You MUST secure your Firestore database with proper rules before production use. See the security section below.
 
-**API Key Management**: OpenRouter keys stored in browser localStorage - never commit to repository.
+**API Key Management**: OpenRouter keys are stored ONLY in browser localStorage - never synced to cloud. This prevents API key theft if your Firestore is compromised.
+
+## 🔒 Security Configuration
+
+### Firestore Security Rules
+
+⚠️ **CRITICAL**: The default setup uses open security rules for testing. In production, you MUST secure your Firestore database to prevent unauthorized access.
+
+**Recommended Firestore Rules** (paste in Firebase Console):
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Only allow authenticated users to read/write their own data
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // For single-user setup without auth, restrict by IP or remove after setup
+    match /users/default-user/{document=**} {
+      // TEMPORARY: Replace with proper authentication
+      allow read, write: if true; // CHANGE THIS!
+    }
+  }
+}
+```
+
+### API Key Security
+
+1. **Never store API keys in Firestore** - The app now prevents this automatically
+2. **API keys are stored only in browser localStorage** - Not synced to cloud
+3. **Each device needs its own API key entry** - This is by design for security
+4. **If your API key was compromised**:
+   - Generate a new key at https://openrouter.ai/keys
+   - Clear your browser's localStorage
+   - Re-enter the new key in settings
 
 ---
 

@@ -81,6 +81,11 @@ class SecretaryApp {
             // Update UI
             this.updateUI();
             
+            // Clean up any API keys from Firestore (security fix)
+            this.cleanupApiKeysFromFirestore().catch(error => {
+                console.error('Failed to cleanup API keys:', error);
+            });
+            
             console.log('✅ Secretary AI initialized successfully');
         } catch (error) {
             console.error('❌ Failed to initialize Secretary AI:', error);
@@ -1467,6 +1472,36 @@ class SecretaryApp {
             storage: this.storageService?.getComprehensiveSyncStatus(),
             settings: this.settings
         };
+    }
+    /**
+     * Clean up API keys from Firestore (security fix)
+     * This should be run once to remove any accidentally stored API keys
+     */
+    async cleanupApiKeysFromFirestore() {
+        if (!this.firestoreService || !this.firestoreService.isAvailable()) {
+            console.log('Firestore not available, skipping API key cleanup');
+            return;
+        }
+
+        try {
+            // Load current settings from Firestore
+            const cloudSettings = await this.firestoreService.loadSettings();
+            
+            if (cloudSettings && cloudSettings.openrouterApiKey) {
+                console.warn('Found API key in Firestore - removing for security');
+                
+                // Remove API key from cloud settings
+                const { openrouterApiKey, ...cleanSettings } = cloudSettings;
+                
+                // Save back without API key
+                await this.firestoreService.saveSettings(cleanSettings);
+                console.log('API key removed from Firestore');
+            } else {
+                console.log('No API key found in Firestore - system is secure');
+            }
+        } catch (error) {
+            console.error('Error during API key cleanup:', error);
+        }
     }
 }
 

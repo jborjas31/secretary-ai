@@ -183,16 +183,20 @@ class StorageService {
      * Save settings
      */
     async saveSettings(settings) {
-        // Save locally first
+        // Save locally first (including API key)
         this.setLocal('settings', {
             ...settings,
             localUpdatedAt: new Date().toISOString()
         });
 
-        // Sync to Firestore if available
+        // SECURITY: Never save API key to Firestore
+        // Create a copy of settings without the API key for cloud sync
+        const { openrouterApiKey, ...settingsForCloud } = settings;
+        
+        // Sync to Firestore if available (without API key)
         if (this.firestoreService && this.firestoreService.isAvailable()) {
             try {
-                await this.firestoreService.saveSettings(settings);
+                await this.firestoreService.saveSettings(settingsForCloud);
                 this.setLocal('settings-synced', {
                     syncedAt: new Date().toISOString(),
                     status: 'synced'
@@ -213,34 +217,42 @@ class StorageService {
      * Load settings
      */
     async loadSettings() {
-        // Try Firestore first
+        // Always get local settings first (for API key)
+        const localSettings = this.getLocal('settings') || {};
+        const localApiKey = localSettings.openrouterApiKey || '';
+        
+        // Try to get other settings from Firestore
+        let cloudSettings = null;
         if (this.firestoreService && this.firestoreService.isAvailable()) {
             try {
-                const firestoreSettings = await this.firestoreService.loadSettings();
-                if (firestoreSettings) {
-                    // Cache locally
-                    this.setLocal('settings', firestoreSettings);
-                    return firestoreSettings;
-                }
+                cloudSettings = await this.firestoreService.loadSettings();
             } catch (error) {
                 console.error('Failed to load settings from Firestore:', error);
             }
         }
 
-        // Fallback to local storage
-        const localSettings = this.getLocal('settings');
-        if (localSettings) {
-            return localSettings;
-        }
-
-        // Return default settings
-        return {
-            openrouterApiKey: '',
-            selectedModel: 'deepseek/deepseek-r1',
-            refreshInterval: 30,
-            notifications: true,
-            theme: 'light'
+        // Merge settings: cloud settings + local API key
+        // SECURITY: API key always comes from localStorage only
+        const mergedSettings = {
+            ...(cloudSettings || {}),
+            openrouterApiKey: localApiKey, // Always use local API key
+            localUpdatedAt: localSettings.localUpdatedAt
         };
+
+        // Ensure we have all required fields
+        const finalSettings = {
+            openrouterApiKey: mergedSettings.openrouterApiKey || '',
+            selectedModel: mergedSettings.selectedModel || 'deepseek/deepseek-r1',
+            refreshInterval: mergedSettings.refreshInterval || 30,
+            notifications: mergedSettings.notifications !== undefined ? mergedSettings.notifications : true,
+            theme: mergedSettings.theme || 'light',
+            localUpdatedAt: mergedSettings.localUpdatedAt
+        };
+
+        // Update local cache with merged settings
+        this.setLocal('settings', finalSettings);
+        
+        return finalSettings;
     }
 
     /**
