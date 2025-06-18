@@ -124,11 +124,11 @@ Is GitHub Pages: ${info.isGitHubPages}`;
                         'X-Title': 'Secretary AI Test'
                     },
                     body: JSON.stringify({
-                        model: 'deepseek/deepseek-r1',
+                        model: 'anthropic/claude-3.5-sonnet',
                         messages: [
                             {
                                 role: 'user',
-                                content: 'Say "Hello from OpenRouter with DeepSeek R1!" and nothing else.'
+                                content: 'Say "Hello from OpenRouter with Claude 3.5 Sonnet!" and nothing else.'
                             }
                         ],
                         max_tokens: 50,
@@ -169,7 +169,7 @@ Is GitHub Pages: ${info.isGitHubPages}`;
                         'X-Title': 'Secretary AI Test'
                     },
                     body: JSON.stringify({
-                        model: 'deepseek/deepseek-r1',
+                        model: 'anthropic/claude-3.5-sonnet',
                         messages: [
                             {
                                 role: 'system',
@@ -177,7 +177,7 @@ Is GitHub Pages: ${info.isGitHubPages}`;
                             },
                             {
                                 role: 'user',
-                                content: 'Create a simple schedule with 2 tasks for this afternoon. Return JSON with "schedule" array containing objects with "time", "task", "duration", "priority", and "category" fields. Test DeepSeek R1 structured output.'
+                                content: 'Create a simple schedule with 2 tasks for this afternoon. Return JSON with "schedule" array containing objects with "time", "task", "duration", "priority", and "category" fields. Test Claude 3.5 Sonnet structured output.'
                             }
                         ],
                         max_tokens: 500,
