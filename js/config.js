@@ -21,7 +21,7 @@ const APP_CONFIG = {
     
     // Default settings
     defaults: {
-        selectedModel: 'anthropic/claude-3.5-sonnet',
+        selectedModel: 'deepseek/deepseek-r1',
         refreshInterval: 30, // minutes
         maxScheduleHours: 12, // hours to schedule ahead
         maxTasks: 20, // maximum tasks to include in schedule
@@ -31,7 +31,7 @@ const APP_CONFIG = {
     // OpenRouter settings
     openrouter: {
         baseUrl: 'https://openrouter.ai/api/v1/chat/completions',
-        defaultModel: 'anthropic/claude-3.5-sonnet',
+        defaultModel: 'deepseek/deepseek-r1',
         maxTokens: 2000,
         temperature: 0.3,
         timeout: 30000, // 30 seconds

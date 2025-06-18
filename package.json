@@ -9,7 +9,7 @@
     "serve": "npx http-server -p 8000 -c-1",
     "test": "echo \"Testing PWA functionality...\" && node -c js/*.js",
     "deploy": "echo \"Deployment instructions in README.md\"",
-    "validate": "node -c js/app.js && node -c js/config.js && node -c js/task-parser.js && node -c js/llm-service.js && node -c js/firestore.js && node -c js/storage.js"
+    "validate": "node -c js/app.js && node -c js/config.js && node -c js/task-parser.js && node -c js/llm-service.js && node -c js/firestore.js && node -c js/storage.js && node -c js/validation-utils.js && node -c js/event-manager.js && node -c js/ui-components.js && node -c js/task-data-service.js && node -c js/schedule-data-service.js"
   },
   "keywords": [
     "pwa",

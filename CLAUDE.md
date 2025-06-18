@@ -2,21 +2,113 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Commands
+## Quick Navigation
+- [Core Guidelines](#design-philosophy-simplicity-first)
+- [Architecture & Technical Details](#architecture-overview)
+- [Development Workflow](#development-commands)
+- [Current Implementation Status](#current-implementation-status)
+- [Future Roadmap](#roadmap-personal-secretary-ai-enhancement)
 
-```bash
-# Local development server (Python)
-npm run start
+### 🎯 Key Points for Development
+- **Simplicity First**: Default to simple solutions (see Design Philosophy below)
+- **No Build Process**: This is a static PWA - no webpack/babel/transpilation
+- **Offline First**: Everything works without internet connectivity
+- **Single User**: No authentication complexity needed
+- **Current Phase**: Task Management (Phase 2) ✅ Complete
 
-# Alternative dev server with no cache (Node.js)
-npm run serve
+---
 
-# Validate JavaScript syntax
-npm run validate
+# PART 1: CORE GUIDELINES
 
-# Basic PWA functionality test
-npm run test
+## Design Philosophy: Simplicity First
+
+**Guiding Principle**: Default to simple solutions, but don't be afraid of complexity when it adds real value.
+
+### Why Simplicity Matters
+
+Secretary AI is a personal productivity tool designed to help users manage tasks efficiently. Complex solutions often:
+- Increase maintenance burden
+- Make the app harder to understand and modify
+- Add potential points of failure
+- Slow down development of actual features
+
+### Simplicity Guidelines
+
+**Start Simple**:
+- Begin with the most straightforward solution that solves the problem
+- Use existing patterns and modules in the codebase
+- Leverage browser APIs before adding external dependencies
+- Write code that's easy to understand and modify
+
+**Consider Complexity When**:
+- It significantly improves user experience
+- It solves a real performance or reliability issue
+- It reduces code duplication across multiple features
+- The simple solution has clear, documented limitations
+
+### Practical Examples
+
+**Good Default Approach**:
+```javascript
+// Simple, direct solution for most cases
+function formatTaskDate(date) {
+  return new Date(date).toLocaleDateString();
+}
 ```
+
+**When Complexity Adds Value**:
+```javascript
+// More complex but valuable for user experience
+function parseNaturalLanguageDate(input) {
+  // Complex parsing logic is justified here because it
+  // significantly improves how users interact with the app
+  // (allows "tomorrow", "next Friday", etc.)
+}
+```
+
+### Decision Process
+
+When implementing features:
+
+1. **Start with**: "What's the simplest way to solve this?"
+2. **Then ask**: "Does this simple solution have significant drawbacks?"
+3. **If yes**: "Does added complexity provide proportional value?"
+4. **Document**: If you choose complexity, explain why in comments
+
+### Architecture Considerations
+
+**Current Strengths** (maintain these):
+- No build process keeps deployment simple
+- Modular structure allows easy feature additions
+- Service worker provides offline functionality without complexity
+- Single-user design eliminates authentication overhead
+
+**When to Propose Changes**:
+- If you identify a pattern that would significantly reduce code duplication
+- If performance profiling shows a real bottleneck
+- If user feedback indicates a feature needs enhancement
+- Always explain the trade-offs and benefits
+
+### Communication with Users
+
+When proposing solutions:
+- Default to simple implementations
+- If complexity is beneficial, explain why: "I could implement this simply as X, but doing Y would provide [specific benefits]"
+- Let users decide if the added complexity is worth it
+- Be transparent about maintenance implications
+
+### Remember
+
+- This is a working app that helps users daily - stability matters
+- Every line of code should provide value to the end user
+- It's easier to add complexity later than to remove it
+- The existing architecture has proven successful - enhance rather than rebuild
+
+The goal is thoughtful development that balances simplicity with user value, not rigid adherence to either extreme.
+
+---
+
+# PART 2: CURRENT SYSTEM
 
 ## Architecture Overview
 
@@ -35,7 +127,9 @@ Secretary AI is an **offline-first PWA** with a modular, service-oriented archit
 3. StorageService saves locally + syncs to Firestore
 4. UI renders with real-time filtering (shows only upcoming tasks)
 
-## Configuration System
+## Technical Implementation
+
+### Configuration System
 
 **Environment Detection**: The app auto-detects localhost vs GitHub Pages and adjusts paths accordingly.
 
@@ -46,7 +140,7 @@ Secretary AI is an **offline-first PWA** with a modular, service-oriented archit
 
 **Dynamic Path Resolution**: Use `Config.getResourceUrl(path)` for GitHub Pages compatibility instead of relative paths.
 
-## OpenRouter Integration
+### OpenRouter Integration
 
 **Model Strategy**: Primary model with fallback array for reliability:
 ```javascript
@@ -61,7 +155,7 @@ Secretary AI is an **offline-first PWA** with a modular, service-oriented archit
 
 **Schedule Generation**: Creates time-aware prompts with current context, handles task prioritization, and implements fallback scheduling when LLM fails.
 
-## Firestore Sync Architecture
+### Firestore Sync Architecture
 
 **Single-User Design**: Uses fixed user ID (`default-user`) - no authentication required.
 
@@ -75,7 +169,7 @@ users/default-user/
 
 **Sync Strategy**: Immediate local save + background cloud sync with "cloud wins" conflict resolution.
 
-## Service Worker Caching
+### Service Worker Caching
 
 **Multi-layered Strategy**:
 - Cache-first for static assets (HTML, CSS, JS)
@@ -84,7 +178,13 @@ users/default-user/
 
 **Important**: Service worker uses relative paths (`./sw.js`) for GitHub Pages compatibility.
 
-## Development Patterns
+### File Dependencies
+
+**Critical Path**: `tasks.md` must exist in root directory for task parsing to work.
+
+**Module Loading Order**: config.js → validation-utils.js → event-manager.js → ui-components.js → storage.js → firestore.js → task-data-service.js → schedule-data-service.js → task-parser.js → llm-service.js → app.js (as defined in index.html).
+
+**Service Worker**: Caches all JS modules and tasks.md for offline functionality.
 
 **No Build Process**: Direct static file serving - just start a local server and develop.
 
@@ -121,142 +221,90 @@ users/default-user/
 
 **Service Worker**: Caches all JS modules and tasks.md for offline functionality.
 
-## Phase 2 Preparation Status (COMPLETED)
+## Current Implementation Status
 
-The following foundational components have been implemented to prepare for Phase 2 (Task Management Interface):
+### Phase 2: Task Management Interface (COMPLETED ✅)
 
-### ✅ UI Component Architecture (`js/ui-components.js`)
-- **UIComponent Base Class**: Reusable component foundation with event handling and lifecycle management
-- **TaskFormComponent**: Complete task creation/editing form with natural language date input
-- **TaskListComponent**: Interactive task display with checkboxes, edit/delete actions
-- **SearchBarComponent**: Debounced search with clear functionality
-- **FloatingActionButton**: Positioned floating action button for quick task creation
+The app now includes a complete task management system with the following features:
 
-### ✅ Event Management System (`js/event-manager.js`)
-- **EventManager Class**: Pub/sub pattern with priority support, history tracking, and error handling
-- **TaskEvents Constants**: Standardized event names for task operations (create, update, delete, complete)
-- **TaskEventHelpers**: Helper functions for common task event emissions
-- **Global Event Manager**: Centralized event coordination across components
+#### Core Features Implemented
+1. **View Toggle System**: Switch between Schedule and Task Management views
+2. **Task CRUD Operations**: Create, read, update, delete tasks via web interface
+3. **Rich Task Editor**: Natural language dates, priority levels, sub-tasks, categories
+4. **Organization Tools**: Collapsible sections, search, filters, bulk operations
+5. **Real-time Sync**: Event-driven updates with Firestore integration
+6. **Mobile Optimized**: Touch-friendly interface with responsive design
 
-### ✅ Validation Framework (`js/validation-utils.js`)
-- **Natural Language Date Parsing**: Support for "tomorrow", "next Friday", "in 3 days", "June 15", etc.
-- **Task Data Validation**: Complete validation with field-specific error messages
-- **Input Sanitization**: XSS prevention for all user inputs
-- **Search Query Validation**: Protection against injection attacks
+#### Technical Components Added
+- **UI Components** (`js/ui-components.js`): Reusable component architecture
+- **Event System** (`js/event-manager.js`): Pub/sub pattern for real-time updates
+- **Validation** (`js/validation-utils.js`): Natural language parsing, input sanitization
+- **Task Management CSS** (`css/task-management.css`): Complete responsive styling
+- **Data Services**: TaskDataService and ScheduleDataService for persistence
 
-### ✅ CSS Component System (`css/task-management.css`)
-- **Task Form Styles**: Modal overlay, responsive forms, validation states
-- **Task List Styles**: Interactive items with hover effects, action buttons
-- **Search Bar Styles**: Rounded input with clear button
-- **Floating Action Button**: Animated FAB with hover effects
-- **Responsive Design**: Mobile-optimized layouts and touch-friendly interactions
+#### Success Metrics Achieved
+- Task management operations < 30 seconds
+- Natural language date parsing
+- Real-time UI updates
+- Full mobile responsiveness
+- Complete CRUD functionality
 
-### ✅ Integration Updates
-- **HTML**: Added new CSS and JS includes with proper loading order
-- **Service Worker**: Updated cache to include new files (v6)
-- **Testing**: Created comprehensive test suite in `/tests/` directory
+With Phase 2 complete, the foundation is ready for Phase 3 (Multi-Date System).
 
-### 🔧 Ready for Phase 2 Implementation ✅ COMPLETED
-All architectural foundations are in place. Phase 2 has been successfully implemented with:
-1. ✅ Components integrated into the main app
-2. ✅ Task management UI added with view toggle
-3. ✅ CRUD operations implemented through data services
-4. ✅ Search, filtering, and collapsible sections
-5. ✅ Floating action button and modal forms
-6. ✅ Event system integration for real-time updates
+---
 
-## Phase 2 Implementation Status (COMPLETED)
+# PART 3: DEVELOPMENT GUIDE
 
-### ✅ **Task Management Interface Successfully Implemented**
+## Development Commands
 
-#### **1. View Toggle System**
-- Added toggle button in header to switch between Schedule and Task Management views
-- Seamless transition between modes with persistent state
-- Visual indicators for active mode
+```bash
+# Local development server (Python)
+npm run start
 
-#### **2. Task Editor UI**
-- **Rich Task Forms**: Complete modal forms with natural language date input
-- **Inline Editing**: Click-to-edit functionality with validation
-- **Category Management**: Dropdown with all task sections (Today, Upcoming, Daily, etc.)
-- **Priority & Duration**: Visual priority indicators and time estimation
-- **Sub-tasks Support**: Dynamic sub-task addition/removal
+# Alternative dev server with no cache (Node.js)
+npm run serve
 
-#### **3. Task Organization Views**
-- **Collapsible Sections**: Organized by category with task counts
-- **Search Functionality**: Real-time search across all task text
-- **Interactive Task Lists**: Checkboxes for completion, edit/delete actions
-- **Bulk Operations**: Select and manage multiple tasks
+# Validate JavaScript syntax
+npm run validate
 
-#### **4. Quick Actions**
-- **Floating Action Button**: Always-accessible task creation
-- **Natural Language Dates**: "tomorrow", "next Friday", "in 3 days" support
-- **Smart Validation**: Comprehensive input validation with helpful error messages
-- **Auto-sync**: Real-time updates across components
+# Basic PWA functionality test
+npm run test
+```
 
-#### **5. CRUD Operations Integration**
-- **TaskDataService Integration**: Full CRUD through Phase 1 data layer
-- **Fallback Support**: Works with or without Firestore connectivity
-- **Event-Driven Updates**: Real-time UI updates via event system
-- **Optimistic UI**: Instant feedback with background sync
+## Development Patterns
 
-#### **6. Advanced Features**
-- **Search & Filter**: Debounced search with multiple filter options
-- **Task Sections**: Visual organization by time-based categories
-- **Completion Tracking**: Mark tasks complete with timestamps
-- **Error Handling**: Graceful degradation and user feedback
+**Simplicity First**: See "Design Philosophy" section above. This is the #1 priority.
 
-### **📁 Implementation Files Added/Modified:**
+**No Build Process**: Direct static file serving - just start a local server and develop.
 
-#### **HTML Structure** (`index.html`)
-- Added view toggle button in header
-- Task management container with search and sections
-- Proper semantic structure for accessibility
+**Environment Handling**: 
+- Development mode (localhost) shows debug logs and can use mock data
+- Production mode auto-detects GitHub Pages paths
+- Feature flags in config control Firestore, logging, etc.
 
-#### **CSS Styling** (`css/task-management.css`)
-- Complete responsive styling for all components
-- Mobile-optimized touch interactions
-- Dark mode support and accessibility features
+**Testing**: Use `test-api.html` for debugging OpenRouter API integration and environment detection.
 
-#### **JavaScript Implementation** (`js/app.js`)
-- **400+ lines of new task management code**
-- View mode toggle and state management
-- Component initialization and lifecycle management
-- CRUD operations with validation and events
-- Search and filtering logic
-- Collapsible sections with task grouping
+## Common Development Tasks
 
-#### **Test Suite** (`/tests/`)
-- API integration testing (`test-api.html`)
-- Phase 2 features integrated into main app interface
-- CRUD operation validation through task management view
-- Interactive task management in main application
+**Adding New Task Categories**: Modify TaskParser's section detection patterns and add corresponding CSS classes.
 
-### **🎯 Phase 2 Success Metrics Achieved:**
+**Updating AI Models**: Edit `APP_CONFIG.openRouter.models` array in config.js - first model is primary, others are fallbacks.
 
-#### **User Experience**
-- ✅ **Task Management**: Time to add/edit tasks < 30 seconds
-- ✅ **Natural Language**: Date parsing for common expressions
-- ✅ **Real-time Updates**: Instant UI feedback for all operations
-- ✅ **Mobile Responsive**: Touch-friendly interface on all devices
+**Modifying Sync Logic**: StorageService coordinates local/cloud - modify here for different sync strategies.
 
-#### **Technical Performance**
-- ✅ **Component Architecture**: Reusable, maintainable UI components
-- ✅ **Event System**: Decoupled communication between components
-- ✅ **Data Integration**: Seamless integration with Phase 1 data services
-- ✅ **Validation**: Comprehensive input validation and sanitization
+**UI Updates**: Main UI rendering in SecretaryApp's `updateScheduleDisplay()` and `renderTaskItem()` methods.
 
-#### **Feature Completeness**
-- ✅ **All Roadmap Items**: Every Phase 2 feature implemented
-- ✅ **Backward Compatibility**: Works with existing schedule functionality
-- ✅ **Progressive Enhancement**: Graceful fallbacks for all features
-- ✅ **Testing Coverage**: Full test suite for verification
+## Deployment Notes
 
-### **🚀 Ready for Phase 3 Implementation**
-Phase 2 provides the complete task management foundation needed for Phase 3 (Multi-Date System):
-1. **Task Management UI** - Complete CRUD interface
-2. **Event System** - Real-time updates and coordination
-3. **Data Services** - Robust data layer with sync capabilities
-4. **Component Architecture** - Reusable, extensible components
+**GitHub Pages**: App auto-detects subdirectory deployment and adjusts all paths accordingly. No configuration needed.
+
+**Firebase Setup**: Update `FIREBASE_CONFIG` in config.js with your project credentials. Single-user setup uses open security rules.
+
+**API Key Management**: OpenRouter keys stored in browser localStorage - never commit to repository.
+
+---
+
+# PART 4: FUTURE ROADMAP
 
 ## Roadmap: Personal Secretary AI Enhancement
 

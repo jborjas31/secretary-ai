@@ -236,7 +236,7 @@ class StorageService {
         // Return default settings
         return {
             openrouterApiKey: '',
-            selectedModel: 'anthropic/claude-3.5-sonnet',
+            selectedModel: 'deepseek/deepseek-r1',
             refreshInterval: 30,
             notifications: true,
             theme: 'light'

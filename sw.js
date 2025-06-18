@@ -1,4 +1,4 @@
-const CACHE_NAME = 'secretary-ai-v13'; // Optimized task migration logic
+const CACHE_NAME = 'secretary-ai-v14'; // Changed default model to DeepSeek R1
 const STATIC_ASSETS = [
     './',
     './index.html',
