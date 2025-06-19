@@ -133,8 +133,8 @@ window.loadInsightsModal = async function() {
 window.loadUIComponents = async function() {
     try {
         if (!window.UIComponents) {
-            const module = await moduleLoader.loadModule('./ui-components.js');
-            window.UIComponents = module.UIComponents || module;
+            await moduleLoader.loadModule('./ui-components.js');
+            // Don't reassign - ui-components.js already sets window.UIComponents
         }
         return window.UIComponents;
     } catch (error) {
