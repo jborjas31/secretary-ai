@@ -457,6 +457,10 @@ class FloatingActionButton extends UIComponent {
 }
 
 // Export components
+// Make UIComponent available globally for other components that extend it
+window.UIComponent = UIComponent;
+
+// Also expose all components as a collection
 window.UIComponents = {
     UIComponent,
     TaskFormComponent,

@@ -176,11 +176,9 @@ class DOMDiff {
     }
 }
 
-// Export singleton instance
+// Create singleton instance
 const domDiff = new DOMDiff();
 
-// Also export the class for testing
-export { DOMDiff, domDiff as default };
-
-// Make available globally for non-module scripts
+// Make available globally
 window.domDiff = domDiff;
+window.DOMDiff = DOMDiff;

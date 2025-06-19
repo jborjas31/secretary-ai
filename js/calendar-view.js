@@ -255,6 +255,9 @@ class CalendarView extends UIComponent {
     }
 }
 
+// Make available globally
+window.CalendarView = CalendarView;
+
 // Export for use in app.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CalendarView;
