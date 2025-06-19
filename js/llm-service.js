@@ -179,7 +179,7 @@ class LLMService {
         
         let userPrompt;
         if (context.rolloverTasks || context.workloadSummary || context.upcomingSchedules) {
-            userPrompt = this.createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context);
+            userPrompt = this.createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context, targetDate, today);
         } else {
             // Standard prompt for backward compatibility
             const taskList = this.formatTaskList(tasks);
@@ -563,7 +563,7 @@ Use these priorities: high, medium, low`;
     /**
      * Create enhanced prompt with multi-day context
      */
-    createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context) {
+    createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context, targetDate, today) {
         const taskList = this.formatTaskList(tasks);
         
         let prompt = `Create a context-aware daily schedule considering past performance and future commitments.
