@@ -1,12 +1,15 @@
-const CACHE_NAME = 'secretary-ai-v14'; // Changed default model to DeepSeek R1
+const CACHE_NAME = 'secretary-ai-v17'; // Added pattern analysis & insights
 const STATIC_ASSETS = [
     './',
     './index.html',
     './manifest.json',
     './css/style.css',
     './css/task-management.css',
+    './css/calendar.css',
+    './css/insights.css',
     './js/app.js',
     './js/config.js',
+    './js/performance-monitor.js',
     './js/validation-utils.js',
     './js/event-manager.js',
     './js/ui-components.js',
@@ -16,6 +19,9 @@ const STATIC_ASSETS = [
     './js/schedule-data-service.js',
     './js/task-parser.js',
     './js/llm-service.js',
+    './js/pattern-analyzer.js',
+    './js/insights-modal.js',
+    './js/calendar-view.js',
     './tasks.md'
 ];
 

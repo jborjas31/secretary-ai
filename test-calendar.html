@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar View Test</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/calendar.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .test-controls {
+            margin-bottom: 20px;
+        }
+        .test-controls button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        .test-output {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Calendar View Component Test</h1>
+    
+    <div class="test-controls">
+        <button onclick="showCalendar()">Show Calendar</button>
+        <button onclick="hideCalendar()">Hide Calendar</button>
+        <button onclick="toggleCalendar()">Toggle Calendar</button>
+        <button onclick="addIndicators()">Add Mock Indicators</button>
+    </div>
+    
+    <div class="test-output" id="output">
+        Selected date will appear here...
+    </div>
+
+    <script src="js/ui-components.js"></script>
+    <script src="js/calendar-view.js"></script>
+    <script>
+        let calendar;
+        const output = document.getElementById('output');
+        
+        // Initialize calendar
+        function initCalendar() {
+            calendar = new CalendarView({
+                currentDate: new Date(),
+                onDateSelect: (date) => {
+                    output.textContent = `Selected date: ${date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })}`;
+                    console.log('Date selected:', date);
+                },
+                onClose: () => {
+                    output.textContent += '\nCalendar closed';
+                    console.log('Calendar closed');
+                },
+                onLoadIndicators: async (startDate, endDate) => {
+                    console.log('Loading indicators for:', startDate, 'to', endDate);
+                    
+                    // Return mock data
+                    const indicators = [];
+                    const current = new Date(startDate);
+                    while (current <= endDate) {
+                        const dateKey = current.toISOString().split('T')[0];
+                        // Random data for testing
+                        if (Math.random() > 0.5) {
+                            indicators.push([dateKey, {
+                                hasSchedule: true,
+                                completionRate: Math.random()
+                            }]);
+                        }
+                        current.setDate(current.getDate() + 1);
+                    }
+                    return indicators;
+                }
+            });
+            
+            document.body.appendChild(calendar.render());
+            output.textContent = 'Calendar initialized!';
+        }
+        
+        function showCalendar() {
+            if (!calendar) initCalendar();
+            calendar.show();
+        }
+        
+        function hideCalendar() {
+            if (calendar) calendar.hide();
+        }
+        
+        function toggleCalendar() {
+            if (!calendar) initCalendar();
+            calendar.toggle();
+        }
+        
+        function addIndicators() {
+            if (!calendar) initCalendar();
+            calendar.loadScheduleIndicators();
+        }
+        
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', initCalendar);
+    </script>
+</body>
+</html>

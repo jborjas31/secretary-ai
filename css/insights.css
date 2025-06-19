@@ -1,0 +1,467 @@
+/**
+ * Insights Modal Styles
+ * Styles for productivity insights dashboard
+ */
+
+/* Modal specific styles */
+.modal-insights {
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
+}
+
+/* Loading state */
+.insights-loading {
+    text-align: center;
+    padding: 3rem;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Insights grid */
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+/* Insight cards */
+.insight-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.insight-card h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Overview card */
+.overview-card {
+    grid-column: span 2;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.overview-card h4 {
+    color: white;
+}
+
+.insight-value {
+    font-size: 3rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.insight-label {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.insight-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
+.insight-footer {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+/* Time of day card */
+.insight-highlight {
+    background: #e3f2fd;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.highlight-emoji {
+    font-size: 1.5rem;
+}
+
+.highlight-text {
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.highlight-value {
+    margin-left: auto;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.insight-bar-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 120px;
+    margin-top: 1rem;
+    padding: 0 0.5rem;
+}
+
+.bar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.bar {
+    width: 80%;
+    background: #667eea;
+    border-radius: 4px 4px 0 0;
+    position: relative;
+    min-height: 5px;
+    transition: height 0.3s ease;
+}
+
+.bar-value {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.bar-label {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Day of week card */
+.day-grid {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.day-highlight {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+}
+
+.day-highlight.best {
+    background: #e8f5e9;
+}
+
+.day-highlight.worst {
+    background: #fff3e0;
+}
+
+.day-emoji {
+    display: block;
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.day-name {
+    display: block;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.day-rate {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.day-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.day-bar {
+    position: relative;
+    height: 24px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.day-fill {
+    height: 100%;
+    background: #667eea;
+    transition: width 0.3s ease;
+}
+
+.day-bar.best .day-fill {
+    background: #4caf50;
+}
+
+.day-bar.worst .day-fill {
+    background: #ff9800;
+}
+
+.day-abbr {
+    position: absolute;
+    left: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #333;
+    z-index: 1;
+}
+
+/* Category card */
+.category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.category-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-stats {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.category-rate {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.category-count {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Duration card */
+.duration-chart {
+    display: flex;
+    height: 40px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.duration-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0 0.5rem;
+}
+
+.duration-segment.accurate {
+    background: #4caf50;
+}
+
+.duration-segment.over {
+    background: #ff9800;
+}
+
+.duration-segment.under {
+    background: #f44336;
+}
+
+.duration-label {
+    white-space: nowrap;
+}
+
+/* Recommendations card */
+.recommendations-card {
+    grid-column: span 2;
+}
+
+.recommendations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.recommendation-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f0f7ff;
+    border-radius: 8px;
+    border-left: 3px solid #2196f3;
+}
+
+.recommendation-item.productivity {
+    background: #f3e5f5;
+    border-left-color: #9c27b0;
+}
+
+.recommendation-item.planning {
+    background: #e8f5e9;
+    border-left-color: #4caf50;
+}
+
+.recommendation-item.estimation {
+    background: #fff3e0;
+    border-left-color: #ff9800;
+}
+
+.recommendation-item.priority {
+    background: #ffebee;
+    border-left-color: #f44336;
+}
+
+.recommendation-item.workload {
+    background: #e0f2f1;
+    border-left-color: #009688;
+}
+
+.rec-icon {
+    font-size: 1.2rem;
+}
+
+.rec-text {
+    flex: 1;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Empty states */
+.no-data, .no-recommendations {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 1rem;
+}
+
+.insights-error {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .insight-card {
+        background: #2c3e50;
+        color: #ecf0f1;
+    }
+    
+    .insight-card h4 {
+        color: #ecf0f1;
+    }
+    
+    .insight-highlight {
+        background: #34495e;
+    }
+    
+    .highlight-text {
+        color: #3498db;
+    }
+    
+    .day-highlight.best {
+        background: #27ae60;
+        color: white;
+    }
+    
+    .day-highlight.worst {
+        background: #e67e22;
+        color: white;
+    }
+    
+    .day-bar {
+        background: #34495e;
+    }
+    
+    .recommendation-item {
+        background: #34495e;
+        color: #ecf0f1;
+    }
+    
+    .rec-text {
+        color: #ecf0f1;
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .modal-insights {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+    }
+    
+    .insights-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+    
+    .overview-card,
+    .recommendations-card {
+        grid-column: span 1;
+    }
+    
+    .insight-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .day-grid {
+        flex-direction: column;
+    }
+}

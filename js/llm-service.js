@@ -123,8 +123,11 @@ class LLMService {
 
     /**
      * Generate a dynamic daily schedule based on tasks and current time
+     * @param {Array} tasks - Array of task objects
+     * @param {Date} currentTime - Current date/time (or target date)
+     * @param {Object} context - Optional multi-day context for enhanced scheduling
      */
-    async generateDailySchedule(tasks, currentTime = new Date()) {
+    async generateDailySchedule(tasks, currentTime = new Date(), context = {}) {
         const timeStr = currentTime.toLocaleTimeString('en-US', { 
             hour: '2-digit', 
             minute: '2-digit',
@@ -137,21 +140,16 @@ class LLMService {
             day: 'numeric'
         });
 
-        // Format tasks for the prompt
-        const taskList = tasks.map(task => {
-            let taskStr = `- ${task.content}`;
-            if (task.priority !== 'medium') {
-                taskStr += ` [Priority: ${task.priority}]`;
-            }
-            if (task.section) {
-                taskStr += ` [Type: ${task.section.replace('Tasks', '')}]`;
-            }
-            return taskStr;
-        }).join('\n');
-
+        // Use enhanced prompt if context is provided
         const systemPrompt = `You are an intelligent personal assistant that creates practical, chronological daily schedules. You MUST respond with valid JSON only, no other text.`;
-
-        const userPrompt = `Create a chronological daily schedule from the current time until end of day (around 22:00).
+        
+        let userPrompt;
+        if (context.rolloverTasks || context.workloadSummary || context.upcomingSchedules) {
+            userPrompt = this.createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context);
+        } else {
+            // Standard prompt for backward compatibility
+            const taskList = this.formatTaskList(tasks);
+            userPrompt = `Create a chronological daily schedule from the current time until end of day (around 22:00).
 
 Current Date and Time: ${dateStr}, ${timeStr}
 
@@ -183,6 +181,7 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format:
 
 Use these categories: work, personal, routine, urgent, health, social
 Use these priorities: high, medium, low`;
+        }
 
         // Try with the user's selected model first, then fallback if needed
         const modelsToTry = [this.model, ...this.fallbackModels];
@@ -490,6 +489,131 @@ Use these priorities: high, medium, low`;
             model: currentModel,
             pricing: pricing
         };
+    }
+
+    /**
+     * Format task list for prompts
+     */
+    formatTaskList(tasks) {
+        return tasks.map(task => {
+            let taskStr = `- ${task.content}`;
+            if (task.priority !== 'medium') {
+                taskStr += ` [Priority: ${task.priority}]`;
+            }
+            if (task.section) {
+                taskStr += ` [Type: ${task.section.replace('Tasks', '')}]`;
+            }
+            if (task.isRollover) {
+                taskStr += ` [ROLLOVER from ${task.rolloverFrom}]`;
+            }
+            return taskStr;
+        }).join('\n');
+    }
+
+    /**
+     * Create enhanced prompt with multi-day context
+     */
+    createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context) {
+        const taskList = this.formatTaskList(tasks);
+        
+        let prompt = `Create a context-aware daily schedule considering past performance and future commitments.
+
+Current Date and Time: ${dateStr}, ${timeStr}
+
+Available Tasks:
+${taskList}`;
+
+        // Add rollover tasks section if present
+        if (context.rolloverTasks && context.rolloverTasks.length > 0) {
+            const rolloverList = this.formatTaskList(context.rolloverTasks);
+            prompt += `
+
+IMPORTANT - Incomplete Tasks from Previous Day:
+${rolloverList}
+These tasks were not completed yesterday and should be prioritized today.`;
+        }
+
+        // Add workload context
+        if (context.workloadSummary) {
+            const ws = context.workloadSummary;
+            prompt += `
+
+Workload Analysis:
+- Average daily workload: ${ws.averageHours} hours
+- Today's estimated workload: ${context.currentWorkload?.totalHours || 'Unknown'} hours`;
+            
+            if (ws.overloadedDays && ws.overloadedDays.length > 0) {
+                prompt += `
+- Warning: ${ws.overloadedDays.length} day(s) in the period are overloaded (>8 hours)`;
+            }
+            
+            if (ws.recommendations && ws.recommendations.length > 0) {
+                prompt += `
+- Recommendations: ${ws.recommendations.map(r => r.message).join('; ')}`;
+            }
+        }
+
+        // Add upcoming schedules context
+        if (context.upcomingSchedules && context.upcomingSchedules.length > 0) {
+            const upcomingSummary = context.upcomingSchedules
+                .slice(0, 3) // Next 3 days
+                .map(day => `  - ${day.date}: ${day.taskCount} tasks, ${day.totalHours} hours`)
+                .join('\n');
+            
+            prompt += `
+
+Upcoming Days:
+${upcomingSummary}`;
+        }
+
+        // Add completion patterns if available
+        if (context.recentPatterns) {
+            const patterns = context.recentPatterns;
+            prompt += `
+
+Historical Performance:
+- Average completion rate: ${patterns.averageCompletion || 0}%
+- Tasks completed per day: ${patterns.averageTasksCompleted || 0}`;
+            
+            if (patterns.bestProductiveHours) {
+                prompt += `
+- Most productive hours: ${patterns.bestProductiveHours}`;
+            }
+        }
+
+        // Enhanced guidelines
+        prompt += `
+
+Enhanced Schedule Guidelines:
+1. Start from NOW (${timeStr}) and schedule until 22:00
+2. PRIORITIZE rollover tasks from previous days
+3. Consider workload balance - if today is overloaded, identify tasks that could be deferred
+4. Assign realistic time slots based on task complexity (15-90 minutes)
+5. Use logical sequencing and include transition times
+6. For recurring tasks, schedule at historically successful times if known
+7. If the upcoming days are heavily loaded, try to complete more today
+8. Learn from completion patterns - schedule important tasks during productive hours
+
+IMPORTANT: Respond with ONLY valid JSON in this exact format:
+{
+  "schedule": [
+    {
+      "time": "14:30",
+      "task": "Task description",
+      "duration": "30 minutes", 
+      "priority": "high",
+      "category": "urgent",
+      "isRollover": true
+    }
+  ],
+  "summary": "Brief explanation of the schedule logic including rollover handling and workload considerations"
+}
+
+Use these categories: work, personal, routine, urgent, health, social
+Use these priorities: high, medium, low
+Add "isRollover": true for tasks that were incomplete from previous days`;
+
+        return prompt;
     }
 }
 

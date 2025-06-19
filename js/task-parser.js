@@ -246,25 +246,27 @@ class TaskParser {
     }
 
     /**
-     * Get tasks filtered by relevance for today
+     * Get tasks filtered by relevance for a specific date
      */
-    getRelevantTasks(tasks = null) {
+    getRelevantTasks(tasks = null, targetDate = new Date()) {
         const taskData = tasks || this.parsedTasks;
         if (!taskData) return [];
 
-        const today = new Date();
         const relevantTasks = [];
+        const isToday = targetDate.toDateString() === new Date().toDateString();
 
-        // Always include today's tasks
-        relevantTasks.push(...taskData.todayTasks);
+        // If viewing today, include today's tasks
+        if (isToday) {
+            relevantTasks.push(...taskData.todayTasks);
+        }
 
-        // Include upcoming tasks for today
-        const todayUpcoming = taskData.upcomingTasks.filter(task => {
+        // Include upcoming tasks for the target date
+        const targetUpcoming = taskData.upcomingTasks.filter(task => {
             if (!task.date) return false;
             const taskDate = new Date(task.date);
-            return taskDate.toDateString() === today.toDateString();
+            return taskDate.toDateString() === targetDate.toDateString();
         });
-        relevantTasks.push(...todayUpcoming);
+        relevantTasks.push(...targetUpcoming);
 
         // Include high-priority undated tasks
         const highPriorityUndated = taskData.undatedTasks.filter(task => 
@@ -275,9 +277,21 @@ class TaskParser {
         // Always include daily tasks
         relevantTasks.push(...taskData.dailyTasks);
 
-        // Include weekly tasks (sample a few)
-        const weeklySelection = taskData.weeklyTasks.slice(0, 3);
-        relevantTasks.push(...weeklySelection);
+        // Include weekly tasks on appropriate day
+        const dayOfWeek = targetDate.getDay();
+        const weeklyForDay = taskData.weeklyTasks.filter(task => {
+            // For now, include a sample of weekly tasks
+            // In future, could parse specific days from task text
+            return true;
+        }).slice(0, 3);
+        relevantTasks.push(...weeklyForDay);
+
+        // Include monthly tasks if it's the right day of month
+        const dayOfMonth = targetDate.getDate();
+        if (dayOfMonth === 1 || dayOfMonth === 15) {
+            const monthlySelection = taskData.monthlyTasks.slice(0, 2);
+            relevantTasks.push(...monthlySelection);
+        }
 
         return relevantTasks;
     }
@@ -285,8 +299,8 @@ class TaskParser {
     /**
      * Convert tasks to a format suitable for LLM processing
      */
-    formatTasksForLLM(tasks) {
-        const relevantTasks = this.getRelevantTasks(tasks);
+    formatTasksForLLM(tasks, targetDate = new Date()) {
+        const relevantTasks = this.getRelevantTasks(tasks, targetDate);
         
         return relevantTasks.map(task => {
             let formattedTask = `${task.text}`;

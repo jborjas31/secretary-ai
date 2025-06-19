@@ -1,0 +1,304 @@
+/**
+ * Calendar View Styles for Secretary AI
+ * Month view calendar with schedule indicators
+ */
+
+/* Calendar Container */
+.calendar-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-color, #f5f5f5);
+    border-bottom: 2px solid var(--border-color, #ddd);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.calendar-view.visible {
+    transform: translateY(0);
+}
+
+/* Calendar Header */
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--card-bg, #ffffff);
+    border-bottom: 1px solid var(--border-color, #eee);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.calendar-month-year {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary, #2c3e50);
+    margin: 0;
+    flex: 1;
+    text-align: center;
+}
+
+.calendar-nav-btn,
+.calendar-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary, #666);
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.calendar-nav-btn:hover,
+.calendar-close-btn:hover {
+    background: var(--hover-bg, #f0f0f0);
+    color: var(--text-primary, #2c3e50);
+}
+
+.calendar-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.calendar-close-btn {
+    font-size: 1.5rem;
+    margin-left: 1rem;
+}
+
+/* Weekday Headers */
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--card-bg, #ffffff);
+    border-bottom: 1px solid var(--border-color, #eee);
+    padding: 0 1rem;
+}
+
+.calendar-weekday {
+    text-align: center;
+    padding: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary, #666);
+}
+
+/* Calendar Grid */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: var(--border-color, #eee);
+    padding: 1px;
+    margin: 1rem;
+}
+
+/* Calendar Days */
+.calendar-day {
+    background: var(--card-bg, #ffffff);
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    min-height: 60px;
+}
+
+.calendar-day:hover:not(.empty):not(.disabled) {
+    background: var(--hover-bg, #f0f0f0);
+    transform: scale(1.05);
+    z-index: 1;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-day.empty {
+    cursor: default;
+    background: transparent;
+}
+
+.calendar-day.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.calendar-day.disabled:hover {
+    transform: none;
+    background: var(--card-bg, #ffffff);
+    box-shadow: none;
+}
+
+.calendar-day.today {
+    background: var(--primary-light, #e3f2fd);
+    font-weight: 700;
+}
+
+.calendar-day.current-view {
+    border: 2px solid var(--primary-color, #2196F3);
+}
+
+.calendar-day.past:not(.today) {
+    color: var(--text-muted, #999);
+}
+
+.day-number {
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+/* Schedule Indicators */
+.schedule-indicator {
+    position: absolute;
+    bottom: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted, #999);
+}
+
+.schedule-indicator.indicator-green {
+    background: #4CAF50;
+}
+
+.schedule-indicator.indicator-yellow {
+    background: #FFC107;
+}
+
+.schedule-indicator.indicator-red {
+    background: #f44336;
+}
+
+/* Calendar Toggle Button */
+.calendar-toggle-btn {
+    background: none;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+    margin-left: 0.5rem;
+}
+
+.calendar-toggle-btn:hover {
+    background: var(--hover-bg, #f0f0f0);
+    border-color: var(--primary-color, #2196F3);
+}
+
+.calendar-toggle-btn.active {
+    background: var(--primary-color, #2196F3);
+    color: white;
+    border-color: var(--primary-color, #2196F3);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .calendar-view {
+        max-height: 60vh;
+    }
+    
+    .calendar-header {
+        padding: 0.75rem;
+    }
+    
+    .calendar-month-year {
+        font-size: 1.1rem;
+    }
+    
+    .calendar-grid {
+        margin: 0.5rem;
+        gap: 0;
+    }
+    
+    .calendar-day {
+        min-height: 50px;
+        font-size: 0.9rem;
+    }
+    
+    .day-number {
+        font-size: 0.9rem;
+    }
+    
+    .schedule-indicator {
+        width: 6px;
+        height: 6px;
+        bottom: 4px;
+    }
+    
+    .calendar-weekday {
+        font-size: 0.75rem;
+        padding: 0.25rem;
+    }
+}
+
+/* Landscape Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .calendar-view {
+        max-height: 90vh;
+    }
+    
+    .calendar-day {
+        min-height: 40px;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .calendar-view {
+        background: #1a1a1a;
+        border-bottom-color: #333;
+    }
+    
+    .calendar-header,
+    .calendar-weekdays {
+        background: #2a2a2a;
+        border-bottom-color: #333;
+    }
+    
+    .calendar-grid {
+        background: #333;
+    }
+    
+    .calendar-day {
+        background: #2a2a2a;
+    }
+    
+    .calendar-day:hover:not(.empty):not(.disabled) {
+        background: #3a3a3a;
+    }
+    
+    .calendar-day.today {
+        background: #1e3a5f;
+    }
+    
+    .calendar-nav-btn:hover,
+    .calendar-close-btn:hover,
+    .calendar-toggle-btn:hover {
+        background: #3a3a3a;
+    }
+}
+
+/* Animation for slide down */
+@keyframes calendarSlideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.calendar-view.visible {
+    animation: calendarSlideDown 0.3s ease forwards;
+}
