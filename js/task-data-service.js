@@ -148,6 +148,25 @@ class TaskDataService {
                 updateData.completedAt = null;
             }
             
+            // Simple duplicate check: if text is being changed, verify it won't create a duplicate
+            if (updates.text && this.taskCache.has(taskId)) {
+                const currentTask = this.taskCache.get(taskId);
+                if (currentTask.text !== updates.text) {
+                    // Check if new text would duplicate another task in the same section
+                    const normalizedNewText = updates.text.toLowerCase().trim();
+                    const duplicateExists = Array.from(this.taskCache.values()).some(task => 
+                        task.id !== taskId && 
+                        task.section === (updates.section || currentTask.section) &&
+                        task.text.toLowerCase().trim() === normalizedNewText
+                    );
+                    
+                    if (duplicateExists) {
+                        console.warn(`Update would create duplicate task: "${updates.text}"`);
+                        throw new Error('A task with this text already exists in this section');
+                    }
+                }
+            }
+            
             // Get document reference and update
             const docRef = this.firestoreService.getUserDocRef('tasks', taskId);
             await updateDoc(docRef, updateData);

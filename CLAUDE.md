@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **No Build Process**: This is a static PWA - no webpack/babel/transpilation
 - **Offline First**: Everything works without internet connectivity
 - **Single User**: No authentication complexity needed
-- **Current Phase**: Task Management (Phase 2) ✅ Complete
+- **Current Phase**: Multi-Date System (Phase 3A) ✅ Date Navigation Complete
 
 ---
 
@@ -251,6 +251,207 @@ The app now includes a complete task management system with the following featur
 - Complete CRUD functionality
 
 With Phase 2 complete, the foundation is ready for Phase 3 (Multi-Date System).
+
+### Phase 3A: Date Navigation (COMPLETED ✅)
+
+The app now includes core date navigation functionality:
+
+#### Features Implemented
+1. **Date Navigation Controls**: Previous/Next day buttons with intuitive UI
+2. **Date Picker Integration**: Native browser date selection within ±30 days
+3. **Dynamic Schedule Generation**: Schedules generated for any selected date
+4. **Smart Title Updates**: Context-aware headers (Today/Tomorrow/Yesterday)
+5. **Keyboard Shortcuts**: Arrow keys for navigation, 'T' to return to today
+6. **Performance Optimization**: Schedule caching for visited dates
+
+#### Technical Implementation
+- Added `currentViewDate` state management in SecretaryApp
+- Modified LLM prompts to be date-specific
+- Enhanced TaskParser to filter tasks by target date
+- Integrated with existing ScheduleDataService for persistence
+- Mobile-responsive design with adjusted controls
+
+With Phase 3A complete, the foundation for multi-date scheduling is in place.
+
+### Task Duplication Fix (COMPLETED ✅)
+
+Implemented comprehensive fixes to prevent task duplication issues:
+
+#### Fixes Applied
+1. **Migration Lock System**: Added localStorage-based locking to prevent concurrent migrations
+2. **Smart Re-migration**: Only triggers when task count differs by >10% or >5 tasks
+3. **Duplicate Prevention**: `createTask` now checks for existing similar tasks before creating
+4. **Update Protection**: `updateTask` prevents renaming tasks to match existing ones
+5. **Rollover Deduplication**: Filters out rollover tasks that already exist
+6. **Manual Cleanup**: Added "Remove Duplicate Tasks" button in settings (no 24-hour restriction)
+
+#### User Actions
+- If experiencing duplicates, use the "Remove Duplicate Tasks" button in Settings
+- The system automatically keeps the best version (completed > detailed > oldest)
+- Console commands available: `app.manualDeduplication()` and `app.forceTaskMigration()`
+
+These fixes follow the simplicity principle - preventing duplicates at creation time rather than complex background processes.
+
+### Phase 3 Remaining Implementation Plan
+
+#### Infrastructure Preparations (COMPLETED ✅)
+1. **Cache Management**: LRU eviction with 30-day limit per cache
+2. **Pagination**: `getScheduleHistory()` supports limit/offset
+3. **Performance Monitoring**: Tracks all major operations with P95 metrics
+4. **Task Rollover**: Methods to identify and carry forward incomplete tasks
+
+#### Phase 3B: Calendar UI & Visual Planning (Next Priority)
+
+**Objective**: Add month view calendar for visual schedule overview and quick navigation.
+
+**Implementation Details**:
+
+1. **Create CalendarView Component** (`js/calendar-view.js`):
+```javascript
+class CalendarView extends UIComponent {
+    // Extend existing UIComponent base
+    // Use CSS Grid for month layout
+    // generateMonthGrid(year, month)
+    // markScheduledDates(scheduledDates)
+    // handleDateClick(date)
+}
+```
+
+2. **Visual Indicators**:
+   - Dot indicators for days with schedules
+   - Color coding: green (high completion), yellow (partial), red (low/none)
+   - Highlight current view date
+   - Show today with distinct styling
+
+3. **Integration**:
+   - Add calendar icon button next to view toggle
+   - Slide-down animation for calendar reveal
+   - Click date → navigate and close calendar
+   - Swipe support on mobile
+
+4. **Data Requirements**:
+   - Fetch schedule indicators for visible month
+   - Use `getScheduleHistory()` with appropriate date range
+   - Cache month indicators for performance
+
+**Simplicity Focus**: No external calendar libraries. Pure CSS Grid + native date handling.
+
+#### Phase 3C: Cross-Date Intelligence (Week 2)
+
+**Objective**: Make AI consider multiple days when generating schedules.
+
+**Implementation Details**:
+
+1. **Enhanced LLM Context**:
+```javascript
+// In llm-service.js, modify generateDailySchedule()
+async generateDailySchedule(tasks, targetDate, context = {}) {
+    const enhancedPrompt = this.createEnhancedPrompt({
+        tasks,
+        targetDate,
+        previousIncomplete: context.rolloverTasks || [],
+        upcomingDays: context.upcomingSchedules || [],
+        completionHistory: context.recentPatterns || {},
+        workloadBalance: context.workloadSummary || {}
+    });
+}
+```
+
+2. **Rollover Integration**:
+   - Before generating schedule, check `scheduleDataService.checkForRollovers()`
+   - Include incomplete tasks with special marking
+   - Add UI indicator: "↻ Rolled from yesterday"
+
+3. **Workload Balancing**:
+   - Calculate daily capacity (sum of task durations)
+   - Flag overloaded days in prompt
+   - Simple heuristic: >8 hours = overloaded
+   - Suggest redistribution: "Consider moving non-urgent tasks"
+
+4. **Multi-Day Context Window**:
+   - Load previous 2 days + next 3 days of schedules
+   - Pass summary to LLM: task counts, total hours, completion rates
+   - Let AI naturally balance based on context
+
+**Simplicity Focus**: Enhance existing prompt rather than complex new algorithms.
+
+#### Phase 3D: Pattern Analysis & Learning (Week 3)
+
+**Objective**: Learn from user behavior to improve future scheduling.
+
+**Implementation Details**:
+
+1. **Create PatternAnalyzer Service** (`js/pattern-analyzer.js`):
+```javascript
+class PatternAnalyzer {
+    analyzeCompletionPatterns(historicalData) {
+        // Time-of-day analysis
+        // Day-of-week patterns  
+        // Category success rates
+        // Task duration accuracy
+    }
+    
+    getInsights() {
+        // Return human-readable insights
+        // "You complete 85% of morning tasks"
+        // "Fridays have lowest completion rate"
+    }
+}
+```
+
+2. **Insights Storage**:
+   - Store in localStorage as `secretaryai_patterns`
+   - Update weekly with rolling 30-day window
+   - No new Firestore collections needed
+
+3. **Productivity Dashboard**:
+   - Add insights icon "📊" to header
+   - Modal showing:
+     - Weekly completion trends
+     - Best/worst performance days
+     - Category success rates
+     - Time estimation accuracy
+
+4. **Feed to LLM**:
+```javascript
+// Include in prompt
+userPatterns: {
+    bestProductiveHours: "9am-12pm",
+    lowEnergyPeriods: "2pm-4pm", 
+    categoryPreferences: {
+        "exercise": "morning",
+        "deepWork": "late morning"
+    }
+}
+```
+
+**Simplicity Focus**: Basic statistical analysis, no ML models. Let LLM interpret patterns.
+
+#### Mobile-First Considerations (All Phases)
+
+1. **Touch Optimizations**:
+   - Larger tap targets (min 44px)
+   - Swipe gestures for date navigation
+   - Pull-to-refresh on schedule view
+
+2. **Responsive Breakpoints**:
+   - Calendar: 7-day rows on mobile, full month on desktop
+   - Insights: Cards stack vertically on mobile
+   - Maintain existing responsive patterns
+
+#### Performance Targets
+
+- Calendar render: <100ms
+- Pattern analysis: <200ms (run in background)
+- Multi-day context load: <500ms (parallel fetches)
+- All operations tracked by PerformanceMonitor
+
+#### Testing Approach
+
+1. **Calendar**: Test with multiple months of data
+2. **Rollover**: Test with incomplete tasks across date boundaries
+3. **Patterns**: Test with minimal data (graceful degradation)
+4. **Mobile**: Test on actual devices, not just responsive mode
 
 ---
 
