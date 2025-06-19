@@ -18,6 +18,19 @@ Testing tools and validation for Secretary AI functionality.
 3. Enter OpenRouter API key (optional for environment tests)
 4. Run individual tests or full suite
 
+### test-calendar.html
+**Purpose**: Calendar component testing
+- Month view rendering and navigation
+- Date selection and highlighting
+- Schedule indicator display
+- Mobile responsiveness
+- Touch gesture support
+
+**Usage**:
+1. Start server: `npm run start`
+2. Open `localhost:8000/tests/test-calendar.html`
+3. Test calendar interactions and visual indicators
+
 ## Quick Start
 
 ```bash
@@ -39,6 +52,10 @@ npm run start
 | API Integration | ✅ | ✅ |
 | Task Management | ✅ | ✅ |
 | Data Services | ✅ | ✅ |
+| Calendar View | ✅ | ✅ |
+| Insights Modal | ✅ | ✅ |
+| Date Navigation | ✅ | ✅ |
+| Error Handling | ✅ | ✅ |
 
 ## Development Workflow
 
@@ -49,13 +66,20 @@ npm run start
 
 ### During Development
 1. Use main app with task management view for testing
-2. Use `test-api.html` for API debugging
-3. Check browser console for debugging
+2. Test calendar by clicking 📅 button
+3. Test insights by clicking 📊 button  
+4. Test error handling by going offline/invalid API key
+5. Use `test-api.html` for API debugging
+6. Use `test-calendar.html` for calendar component testing
+7. Check browser console for debugging
 
 ### Pre-Commit
 1. Run `npm run test` - PWA functionality
 2. Test `test-api.html` manually
-3. Verify no console errors in main app
+3. Test calendar view shows correctly
+4. Test insights modal loads data
+5. Test date navigation works both ways
+6. Verify no console errors in main app
 
 ## Troubleshooting
 
@@ -76,8 +100,11 @@ npm run start
 
 - Page load: < 2 seconds
 - Component render: < 100ms
-- API response: < 5 seconds  
+- Calendar render: < 100ms
+- Insights analysis: < 200ms
+- API response: < 5 seconds (30s timeout)
 - Search performance: < 50ms
+- Date navigation: < 500ms
 
 ## Contributing
 
