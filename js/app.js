@@ -1902,10 +1902,23 @@ class SecretaryApp {
                 this.schedulesCache.set(dateKey, savedSchedule);
                 this.setStatus('online', 'Schedule loaded');
             } else {
-                // Generate new schedule for this date
-                const newSchedule = await this.generateSchedule(date);
-                this.currentSchedule = newSchedule;
-                this.schedulesCache.set(dateKey, newSchedule);
+                // Check if this is a past date
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const requestedDate = new Date(date);
+                requestedDate.setHours(0, 0, 0, 0);
+                
+                if (requestedDate < today) {
+                    // Don't generate schedules for past dates
+                    console.log(`No schedule exists for past date: ${dateKey}`);
+                    this.currentSchedule = null;
+                    this.showToast('No schedule was created for this date', 'info');
+                } else {
+                    // Generate new schedule for today or future dates
+                    const newSchedule = await this.generateSchedule(date);
+                    this.currentSchedule = newSchedule;
+                    this.schedulesCache.set(dateKey, newSchedule);
+                }
             }
             
             this.updateDateDisplay();

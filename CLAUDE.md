@@ -120,12 +120,25 @@ Secretary AI is an **offline-first PWA** with a modular, service-oriented archit
 - **LLMService** (`js/llm-service.js`) - OpenRouter API integration with fallback scheduling
 - **StorageService** (`js/storage.js`) - Coordinates local IndexedDB and cloud sync
 - **FirestoreService** (`js/firestore.js`) - Cloud sync with offline-first strategy
+- **TaskDataService** (`js/task-data-service.js`) - Manages task CRUD operations in Firestore
+- **ScheduleDataService** (`js/schedule-data-service.js`) - Handles schedule persistence and history
+- **PatternAnalyzer** (`js/pattern-analyzer.js`) - Analyzes user behavior and productivity patterns
+- **CalendarView** (`js/calendar-view.js`) - Month view calendar UI component
+- **InsightsModal** (`js/insights-modal.js`) - Displays productivity insights and analytics
+- **PerformanceMonitor** (`js/performance-monitor.js`) - Tracks operation performance metrics
 
 ### Data Flow Pipeline
-1. TaskParser loads/parses `tasks.md` → structured tasks
-2. LLMService processes tasks → AI-generated daily schedule via OpenRouter
-3. StorageService saves locally + syncs to Firestore
-4. UI renders with real-time filtering (shows only upcoming tasks)
+1. TaskDataService loads tasks from Firestore (or TaskParser loads from `tasks.md` as fallback)
+2. User navigates to a date → ScheduleDataService checks for existing schedule
+3. If no schedule exists:
+   - PatternAnalyzer provides user behavior insights
+   - LLMService generates schedule with context (rollover tasks, patterns)
+   - ScheduleDataService saves to Firestore + history collection
+4. UI renders schedule with:
+   - CalendarView for month overview
+   - Date navigation controls
+   - Task completion tracking
+   - InsightsModal for productivity analytics
 
 ## Technical Implementation
 
@@ -163,8 +176,11 @@ Secretary AI is an **offline-first PWA** with a modular, service-oriented archit
 ```
 users/default-user/
 ├── schedules/{date}           # Daily schedule data
+├── history/{date}             # Historical schedule records
+├── tasks/{task-id}            # Individual task documents
 ├── task_states/current        # Task completion status  
-└── settings/user_preferences  # App configuration
+├── settings/user_preferences  # App configuration
+└── analytics/patterns         # User behavior patterns (local storage)
 ```
 
 **Sync Strategy**: Immediate local save + background cloud sync with "cloud wins" conflict resolution.
@@ -182,7 +198,7 @@ users/default-user/
 
 **Critical Path**: `tasks.md` must exist in root directory for task parsing to work.
 
-**Module Loading Order**: config.js → validation-utils.js → event-manager.js → ui-components.js → storage.js → firestore.js → task-data-service.js → schedule-data-service.js → task-parser.js → llm-service.js → app.js (as defined in index.html).
+**Module Loading Order**: config.js → performance-monitor.js → validation-utils.js → event-manager.js → ui-components.js → storage.js → firestore.js → task-data-service.js → schedule-data-service.js → task-parser.js → llm-service.js → pattern-analyzer.js → insights-modal.js → calendar-view.js → app.js (as defined in index.html).
 
 **Service Worker**: Caches all JS modules and tasks.md for offline functionality.
 
@@ -218,7 +234,7 @@ users/default-user/
 
 **Critical Path**: `tasks.md` must exist in root directory for task parsing to work.
 
-**Module Loading Order**: config.js → validation-utils.js → event-manager.js → ui-components.js → storage.js → firestore.js → task-data-service.js → schedule-data-service.js → task-parser.js → llm-service.js → app.js (as defined in index.html).
+**Module Loading Order**: config.js → performance-monitor.js → validation-utils.js → event-manager.js → ui-components.js → storage.js → firestore.js → task-data-service.js → schedule-data-service.js → task-parser.js → llm-service.js → pattern-analyzer.js → insights-modal.js → calendar-view.js → app.js (as defined in index.html).
 
 **Service Worker**: Caches all JS modules and tasks.md for offline functionality.
 
@@ -327,140 +343,132 @@ These fixes follow the simplicity principle - preventing duplicates at creation 
    - Fix: Changed to use the correct `recordMetric()` method
    - Note: Always check method existence before calling
 
-### Phase 3 Remaining Implementation Plan
+4. **Prevented Schedule Generation for Past Dates**:
+   - Issue: App was generating new schedules for past dates that had no schedule
+   - Fix: Added date check to prevent generating schedules for dates before today
+   - Behavior: Past dates without schedules now remain empty with info message
+   - Rationale: Maintains historical accuracy - no retroactive schedule creation
 
-#### Infrastructure Preparations (COMPLETED ✅)
-1. **Cache Management**: LRU eviction with 30-day limit per cache
-2. **Pagination**: `getScheduleHistory()` supports limit/offset
-3. **Performance Monitoring**: Tracks all major operations with P95 metrics
-4. **Task Rollover**: Methods to identify and carry forward incomplete tasks
+### Phase 3 Implementation Summary
 
-#### Phase 3B: Calendar UI & Visual Planning (Next Priority)
+Phase 3 (Multi-Date System) is now largely complete with significant achievements:
 
-**Objective**: Add month view calendar for visual schedule overview and quick navigation.
+#### Completed Components ✅
+1. **Infrastructure**: Cache management, pagination, performance monitoring
+2. **Date Navigation**: Full navigation with keyboard shortcuts and date picker
+3. **Calendar View**: Month view with CSS Grid, mobile-responsive design  
+4. **Pattern Analysis**: Complete analytics system with insights dashboard
+5. **Rollover Tasks**: Automatic carrying forward of incomplete tasks
+6. **Multi-Day Context**: Loading and caching of surrounding days' schedules
+7. **Past Date Handling**: Smart logic to prevent retroactive schedule generation
 
-**Implementation Details**:
+#### Partially Complete 🚧
+- **Cross-Date Intelligence**: Foundation built but LLM needs better context usage
+- **Workload Balancing**: Data available but not yet integrated into prompts
 
-1. **Create CalendarView Component** (`js/calendar-view.js`):
-```javascript
-class CalendarView extends UIComponent {
-    // Extend existing UIComponent base
-    // Use CSS Grid for month layout
-    // generateMonthGrid(year, month)
-    // markScheduledDates(scheduledDates)
-    // handleDateClick(date)
-}
-```
+The app has evolved from a simple daily schedule viewer to a comprehensive multi-date task management system with AI-powered scheduling and productivity analytics.
 
-2. **Visual Indicators**:
-   - Dot indicators for days with schedules
-   - Color coding: green (high completion), yellow (partial), red (low/none)
-   - Highlight current view date
-   - Show today with distinct styling
+#### Phase 3B: Calendar UI & Visual Planning (COMPLETED ✅)
+
+**Implemented Features**:
+
+1. **CalendarView Component** (`js/calendar-view.js`):
+   - Extends UIComponent base class
+   - CSS Grid layout for month view
+   - Dynamic month generation with proper week alignment
+   - Click navigation to any date
+   - Keyboard support (arrow keys, Enter, Escape)
+
+2. **Visual Design**:
+   - Clean month grid with day headers
+   - Today highlighted with distinct styling
+   - Selected date indication
+   - Hover effects for better UX
+   - Mobile-responsive design
 
 3. **Integration**:
-   - Add calendar icon button next to view toggle
-   - Slide-down animation for calendar reveal
-   - Click date → navigate and close calendar
-   - Swipe support on mobile
+   - Calendar icon button in header
+   - Slide-down animation
+   - Click outside to close
+   - Smooth date navigation
 
-4. **Data Requirements**:
-   - Fetch schedule indicators for visible month
-   - Use `getScheduleHistory()` with appropriate date range
-   - Cache month indicators for performance
+4. **Performance**:
+   - Efficient DOM manipulation
+   - No external dependencies
+   - Pure CSS Grid + native date handling
 
-**Simplicity Focus**: No external calendar libraries. Pure CSS Grid + native date handling.
+The calendar provides quick visual navigation across dates and integrates seamlessly with the existing date navigation system.
 
-#### Phase 3C: Cross-Date Intelligence (Week 2)
+#### Phase 3C: Cross-Date Intelligence (PARTIALLY COMPLETED 🚧)
 
 **Objective**: Make AI consider multiple days when generating schedules.
 
-**Implementation Details**:
+**Completed Features**:
 
-1. **Enhanced LLM Context**:
-```javascript
-// In llm-service.js, modify generateDailySchedule()
-async generateDailySchedule(tasks, targetDate, context = {}) {
-    const enhancedPrompt = this.createEnhancedPrompt({
-        tasks,
-        targetDate,
-        previousIncomplete: context.rolloverTasks || [],
-        upcomingDays: context.upcomingSchedules || [],
-        completionHistory: context.recentPatterns || {},
-        workloadBalance: context.workloadSummary || {}
-    });
-}
-```
+1. **Rollover Task Integration** ✅:
+   - `scheduleDataService.checkForRollovers()` identifies incomplete tasks
+   - Rollover tasks included in schedule generation
+   - UI shows "↻" indicator for rolled-over tasks
+   - Duplicate prevention when same task exists in current day
 
-2. **Rollover Integration**:
-   - Before generating schedule, check `scheduleDataService.checkForRollovers()`
-   - Include incomplete tasks with special marking
-   - Add UI indicator: "↻ Rolled from yesterday"
+2. **Multi-Day Context Loading** ✅:
+   - `loadMultiDayContext()` loads previous 2 + next 3 days
+   - Context passed to LLM for better scheduling decisions
+   - Performance optimized with parallel fetching
 
-3. **Workload Balancing**:
-   - Calculate daily capacity (sum of task durations)
-   - Flag overloaded days in prompt
-   - Simple heuristic: >8 hours = overloaded
-   - Suggest redistribution: "Consider moving non-urgent tasks"
+**Still To Implement**:
 
-4. **Multi-Day Context Window**:
-   - Load previous 2 days + next 3 days of schedules
-   - Pass summary to LLM: task counts, total hours, completion rates
-   - Let AI naturally balance based on context
+3. **Enhanced LLM Prompts** 🔄:
+   - Need to pass multi-day context to LLM
+   - Include workload summaries in prompts
+   - Add completion history context
 
-**Simplicity Focus**: Enhance existing prompt rather than complex new algorithms.
+4. **Workload Balancing** 📋:
+   - Calculate daily capacity from durations
+   - Flag overloaded days (>8 hours)
+   - Suggest task redistribution
 
-#### Phase 3D: Pattern Analysis & Learning (Week 3)
+The foundation is in place, but the LLM needs better context utilization for true cross-date intelligence.
 
-**Objective**: Learn from user behavior to improve future scheduling.
+#### Phase 3D: Pattern Analysis & Learning (COMPLETED ✅)
 
-**Implementation Details**:
+**Implemented Features**:
 
-1. **Create PatternAnalyzer Service** (`js/pattern-analyzer.js`):
-```javascript
-class PatternAnalyzer {
-    analyzeCompletionPatterns(historicalData) {
-        // Time-of-day analysis
-        // Day-of-week patterns  
-        // Category success rates
-        // Task duration accuracy
-    }
-    
-    getInsights() {
-        // Return human-readable insights
-        // "You complete 85% of morning tasks"
-        // "Fridays have lowest completion rate"
-    }
-}
-```
+1. **PatternAnalyzer Service** (`js/pattern-analyzer.js`):
+   - Analyzes completion patterns from historical data
+   - Time-of-day productivity analysis
+   - Day-of-week pattern recognition
+   - Category success rate tracking
+   - Duration estimation accuracy metrics
 
-2. **Insights Storage**:
-   - Store in localStorage as `secretaryai_patterns`
-   - Update weekly with rolling 30-day window
-   - No new Firestore collections needed
+2. **Insights Generation**:
+   - `getInsights()` returns human-readable insights
+   - `getRecommendations()` provides actionable suggestions
+   - Identifies best/worst productive times and days
+   - Tracks task completion by priority and category
 
-3. **Productivity Dashboard**:
-   - Add insights icon "📊" to header
-   - Modal showing:
-     - Weekly completion trends
-     - Best/worst performance days
-     - Category success rates
-     - Time estimation accuracy
+3. **InsightsModal UI** (`js/insights-modal.js`):
+   - "📊" icon in header opens productivity dashboard
+   - Displays:
+     - Overview statistics (total tasks, completion rate)
+     - Time-of-day performance graphs
+     - Day-of-week trends
+     - Category breakdowns
+     - Priority analysis
+     - Personalized recommendations
 
-4. **Feed to LLM**:
-```javascript
-// Include in prompt
-userPatterns: {
-    bestProductiveHours: "9am-12pm",
-    lowEnergyPeriods: "2pm-4pm", 
-    categoryPreferences: {
-        "exercise": "morning",
-        "deepWork": "late morning"
-    }
-}
-```
+4. **Data Storage**:
+   - Patterns stored in localStorage (`secretaryai_analytics`)
+   - 30-day rolling window for analysis
+   - Automatic weekly updates
+   - No additional Firestore collections
 
-**Simplicity Focus**: Basic statistical analysis, no ML models. Let LLM interpret patterns.
+5. **LLM Integration** (Partial):
+   - Pattern data available for prompts
+   - Basic insights passed to scheduling
+   - Full integration still pending
+
+The pattern analysis system is fully functional and provides valuable insights into user productivity patterns.
 
 #### Mobile-First Considerations (All Phases)
 
@@ -585,108 +593,76 @@ service cloud.firestore {
 
 ### Current State vs Target State
 
-**Current**: Read tasks.md → Generate today's schedule → Display upcoming tasks
-**Target**: Full task management + Multi-date planning + AI personal secretary features
+**Current State** (What's Already Built):
+- ✅ Web-based task management with full CRUD operations
+- ✅ Multi-date navigation with calendar view
+- ✅ Schedule generation for any date (with smart past-date handling)
+- ✅ Pattern analysis and productivity insights
+- ✅ Task rollover from incomplete previous days
+- ✅ Real-time sync across devices via Firestore
 
-### Core Features to Build
+**Target State** (What's Left to Build):
+- Enhanced AI context utilization for smarter scheduling
+- Conversational AI interface
+- Advanced workload balancing across multiple days
+- Habit tracking and formation
+- Location-based reminders
 
-#### 1. **Web-Based Task Management** (Foundation)
-- **CRUD Operations**: Add, edit, delete tasks directly in the web app (no more editing tasks.md in code)
-- **Task Categories**: Today, Upcoming (with dates), Daily routines, Weekly, Monthly, Yearly, Undated
-- **Smart Input**: Quick-add text box + detailed forms for complex tasks
-- **Priority Management**: High/Medium/Low with visual indicators
-- **Sub-tasks & Reminders**: Full support for nested task details
-- **Drag-and-Drop**: Move tasks between categories and reorder priorities
+### Core Features Still To Build
 
-#### 2. **Multi-Date Schedule System** (Core Feature)
-- **Date Navigation**: Previous/Next day buttons, date picker for any date
-- **Past Schedule View**: "What was I supposed to do on June 10th?"
-- **Future Planning**: "Plan my schedule for next Tuesday"
-- **Schedule History**: Track what was completed vs what was planned
-- **Calendar Integration**: Month/week view for long-term planning
-- **Cross-Date Intelligence**: AI considers multi-day context when scheduling
+#### 1. **Enhanced AI Integration**
+- **Deeper Context Usage**: Make LLM fully utilize multi-day context, patterns, and insights
+- **Workload Balancing**: AI suggests moving tasks between days based on capacity
+- **Learning from Feedback**: Track which suggestions work and improve over time
+- **Natural Language Commands**: "Reschedule my afternoon" or "Find time for exercise"
 
-#### 3. **Enhanced AI Scheduling** (Expand Current)
-- **Date-Specific Scheduling**: Generate schedules for any past/future date
-- **Context Awareness**: AI considers existing schedules, past completion patterns
-- **Multi-Day Planning**: "Plan my next 3 days based on my workload"
-- **Schedule Optimization**: AI suggests better task timing and dependencies
-- **Adaptive Learning**: AI learns from completion patterns and preferences
+#### 2. **Advanced Planning Features**
+- **Project Management**: Break large projects into scheduled tasks
+- **Recurring Task Templates**: Smart handling of routine variations
+- **Goal Tracking**: Connect daily tasks to larger objectives
+- **Time Blocking**: Reserve focus time for deep work
 
-#### 4. **Personal Secretary Features** (Advanced)
-- **Daily Planning Sessions**: "What should I focus on today given my energy levels?"
-- **Progress Tracking**: Mark tasks complete, track habit consistency
+#### 3. **Personal Secretary Features** (Advanced)
+- **Conversational Interface**: Chat with AI about scheduling and planning
 - **Proactive Suggestions**: "You usually do laundry on weekends, want me to schedule it?"
-- **Weekly Reviews**: "How did this week go? What patterns do you see?"
-- **Smart Reminders**: Context-aware notifications based on location, time, energy
+- **Weekly Reviews**: AI-generated summaries of productivity and suggestions
+- **Smart Reminders**: Context-aware notifications based on patterns
+- **Energy-Level Planning**: Schedule tasks based on typical energy patterns
 
 ### Technical Implementation Plan
 
-#### Phase 1: Data Layer Foundation
-1. **TaskDataService**: New service to manage structured task data in Firestore
-   - JSON schema matching current TaskParser structure (seamless transition)
-   - CRUD operations with real-time sync
-   - Section management and task relationships
+The foundation is complete (data services, task management, date navigation). Here's what remains:
 
-2. **ScheduleDataService**: Store generated schedules by date
-   - Historical schedule storage: `schedules/{YYYY-MM-DD}`
-   - Completion tracking and progress metrics
-   - Cross-date schedule coordination
+#### Next Phase: Enhanced AI Context
+1. **Improve LLM Prompt Engineering**:
+   - Pass full multi-day context to LLM
+   - Include pattern analysis insights
+   - Add workload summaries across days
+   - Implement feedback loop for improvements
 
-3. **Data Migration**: Convert existing tasks.md to structured JSON
-   - Parse current tasks.md using existing TaskParser
-   - Migrate to Firestore as initial structured dataset
-   - Maintain tasks.md export functionality for backup
+2. **Workload Intelligence**:
+   - Calculate daily capacity from task durations
+   - Identify overloaded days (>8 hours scheduled)
+   - Suggest task redistribution
+   - Learn optimal task timing from patterns
 
-#### Phase 2: Task Management Interface
-1. **Task Editor UI**: Rich forms for task management
-   - Inline editing with markdown support
-   - Category dropdown with smart defaults
-   - Date picker with natural language input ("next Friday")
-   - Priority and reminder management
+3. **Smart Scheduling Rules**:
+   - Respect energy patterns (no deep work in low-energy times)
+   - Consider task dependencies
+   - Buffer time between appointments
+   - Learn from completion patterns
 
-2. **Task Organization Views**:
-   - Collapsible sections for each category
-   - Search and filter functionality
-   - Bulk operations (select multiple tasks)
-   - Task templates for common routines
+#### Future Phase: Conversational AI Secretary
+1. **Natural Language Interface**: 
+   - Chat-like interaction for planning
+   - Voice commands for task management
+   - Context-aware responses based on history
 
-3. **Quick Actions**: Streamlined task creation
-   - Floating action button for quick add
-   - Voice-to-text task input
-   - Smart category detection from task text
-
-#### Phase 3: Multi-Date System
-1. **Date Navigation UI**: 
-   - Calendar widget with schedule indicators
-   - Quick navigation (today, tomorrow, next week)
-   - Schedule density visualization
-
-2. **Historical Data**:
-   - Past schedule storage and retrieval
-   - Completion rate tracking
-   - Pattern analysis for AI learning
-
-3. **Future Planning**:
-   - Schedule generation for any future date
-   - Workload balancing across multiple days
-   - Deadline-aware task distribution
-
-#### Phase 4: AI Secretary Enhancement
-1. **Conversational Interface**: 
-   - Chat-like interaction with AI secretary
-   - Natural language task creation and modification
-   - Planning consultation ("What should I do first?")
-
-2. **Intelligent Insights**:
-   - Productivity pattern recognition
-   - Optimal scheduling suggestions
-   - Habit formation recommendations
-
-3. **Proactive Management**:
-   - Automated routine scheduling
-   - Deadline and appointment preparation
-   - Energy-level based task ordering
+2. **Proactive Assistant**:
+   - Weekly planning sessions
+   - Habit formation tracking
+   - Deadline reminders with prep time
+   - Energy-based task suggestions
 
 ### Data Architecture Changes
 
