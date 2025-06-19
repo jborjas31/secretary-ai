@@ -311,6 +311,22 @@ These fixes follow the simplicity principle - preventing duplicates at creation 
 
 **Note**: The current workaround is stable and follows the simplicity principle. Refactoring can be done when there's time for comprehensive testing.
 
+### Recent Bug Fixes (2025-06-19)
+
+1. **Fixed Infinite Recursion in PatternAnalyzer**:
+   - Issue: `getInsights()` and `getRecommendations()` were calling each other
+   - Fix: Removed `recommendations` from `getInsights()` and made `getRecommendations()` call specific insight methods directly
+
+2. **Fixed Firestore Collection Path Error**:
+   - Issue: Path `users/default-user/schedules/history` had 4 segments (invalid)
+   - Fix: Changed to `users/default-user/history` (3 segments)
+   - Affected: schedule-data-service.js history collection references
+
+3. **Fixed PerformanceMonitor Method Error**:
+   - Issue: Code was calling non-existent `track()` method
+   - Fix: Changed to use the correct `recordMetric()` method
+   - Note: Always check method existence before calling
+
 ### Phase 3 Remaining Implementation Plan
 
 #### Infrastructure Preparations (COMPLETED ✅)

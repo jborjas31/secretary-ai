@@ -224,8 +224,8 @@ class PatternAnalyzer {
             dayOfWeek: this.getDayOfWeekInsights(),
             categories: this.getCategoryInsights(),
             priorities: this.getPriorityInsights(),
-            durationAccuracy: this.getDurationInsights(),
-            recommendations: this.getRecommendations()
+            durationAccuracy: this.getDurationInsights()
+            // Removed recommendations to prevent circular dependency
         };
 
         return insights;
@@ -395,26 +395,30 @@ class PatternAnalyzer {
      */
     getRecommendations() {
         const recommendations = [];
-        const insights = this.getInsights();
+        // Get specific insights directly to avoid circular dependency
+        const timeOfDayInsights = this.getTimeOfDayInsights();
+        const dayOfWeekInsights = this.getDayOfWeekInsights();
+        const categoryInsights = this.getCategoryInsights();
+        const durationInsights = this.getDurationInsights();
 
         // Time-based recommendations
-        if (insights.timeOfDay.bestProductiveTime) {
+        if (timeOfDayInsights.bestProductiveTime) {
             recommendations.push({
                 type: 'productivity',
-                message: `Schedule important tasks in the ${insights.timeOfDay.bestProductiveTime} - you complete ${insights.timeOfDay.bestRate}% of tasks during this time`
+                message: `Schedule important tasks in the ${timeOfDayInsights.bestProductiveTime} - you complete ${timeOfDayInsights.bestRate}% of tasks during this time`
             });
         }
 
         // Day-based recommendations
-        if (insights.dayOfWeek.worstDay && insights.dayOfWeek.worstRate < 50) {
+        if (dayOfWeekInsights.worstDay && dayOfWeekInsights.worstRate < 50) {
             recommendations.push({
                 type: 'planning',
-                message: `Consider lighter workload on ${insights.dayOfWeek.worstDay}s - completion rate is only ${insights.dayOfWeek.worstRate}%`
+                message: `Consider lighter workload on ${dayOfWeekInsights.worstDay}s - completion rate is only ${dayOfWeekInsights.worstRate}%`
             });
         }
 
         // Duration recommendations
-        if (insights.durationAccuracy.underestimatedRate > 40) {
+        if (durationInsights.underestimatedRate > 40) {
             recommendations.push({
                 type: 'estimation',
                 message: `You tend to underestimate task duration. Consider adding 20-30% buffer time to estimates`
@@ -422,18 +426,20 @@ class PatternAnalyzer {
         }
 
         // Priority recommendations
-        if (insights.priorities.high.completionRate < 70 && insights.priorities.high.taskCount > 10) {
+        const priorityInsights = this.getPriorityInsights();
+        if (priorityInsights.high.completionRate < 70 && priorityInsights.high.taskCount > 10) {
             recommendations.push({
                 type: 'priority',
-                message: `High priority task completion is ${insights.priorities.high.completionRate}%. Consider scheduling fewer high-priority tasks or allocating more time`
+                message: `High priority task completion is ${priorityInsights.high.completionRate}%. Consider scheduling fewer high-priority tasks or allocating more time`
             });
         }
 
         // Overall productivity
-        if (insights.overview.completionRate < 60) {
+        const overviewInsights = this.getOverviewInsights();
+        if (overviewInsights.completionRate < 60) {
             recommendations.push({
                 type: 'workload',
-                message: `Overall completion rate is ${insights.overview.completionRate}%. Consider reducing daily task count or reassessing time estimates`
+                message: `Overall completion rate is ${overviewInsights.completionRate}%. Consider reducing daily task count or reassessing time estimates`
             });
         }
 

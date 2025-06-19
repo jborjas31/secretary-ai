@@ -110,7 +110,7 @@ class ScheduleDataService {
             };
 
             // Save to history subcollection
-            const docRef = this.firestoreService.getUserDocRef('schedules/history', dateKey);
+            const docRef = this.firestoreService.getUserDocRef('history', dateKey);
             await setDoc(docRef, historyData, { merge: true });
 
             // Update cache with LRU tracking
@@ -164,7 +164,7 @@ class ScheduleDataService {
             const { getDoc } = this.firestoreService.firestoreModules;
             const dateKey = typeof date === 'string' ? date : date.toISOString().split('T')[0];
             
-            const docRef = this.firestoreService.getUserDocRef('schedules/history', dateKey);
+            const docRef = this.firestoreService.getUserDocRef('history', dateKey);
             const docSnap = await getDoc(docRef);
             
             if (docSnap.exists()) {
@@ -214,7 +214,7 @@ class ScheduleDataService {
             // Get history collection reference
             const historyCollectionRef = collection(
                 this.firestoreService.db, 
-                `users/${this.userId}/schedules/history`
+                `users/${this.userId}/history`
             );
             
             const q = query(
@@ -478,7 +478,7 @@ class ScheduleDataService {
             
             const historyCollectionRef = collection(
                 this.firestoreService.db, 
-                `users/${this.userId}/schedules/history`
+                `users/${this.userId}/history`
             );
             
             const q = query(
@@ -738,8 +738,8 @@ class ScheduleDataService {
             console.log(`Loaded multi-day context in ${loadTime.toFixed(2)}ms`);
             
             // Track performance
-            if (window.performanceMonitor) {
-                window.performanceMonitor.track('loadMultiDayContext', loadTime);
+            if (window.performanceMonitor && window.performanceMonitor.recordMetric) {
+                window.performanceMonitor.recordMetric('loadMultiDayContext', loadTime);
             }
             
             return context;
