@@ -188,7 +188,7 @@ class LLMService {
         const systemPrompt = `You are an intelligent personal assistant that creates practical, chronological daily schedules. You MUST respond with valid JSON only, no other text.`;
         
         let userPrompt;
-        if (context.rolloverTasks || context.workloadSummary || context.upcomingSchedules) {
+        if (context && Object.keys(context).length > 0) {
             userPrompt = this.createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context, targetDate, today);
         } else {
             // Standard prompt for backward compatibility

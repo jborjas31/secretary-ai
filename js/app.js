@@ -608,6 +608,20 @@ class SecretaryApp {
     }
 
     /**
+     * Calculate total hours from schedule
+     */
+    calculateTotalHours(schedule) {
+        let totalMinutes = 0;
+        
+        schedule.forEach(task => {
+            const duration = parseInt(task.duration) || 0;
+            totalMinutes += duration;
+        });
+        
+        return Math.round(totalMinutes / 60 * 10) / 10; // Round to 1 decimal place
+    }
+
+    /**
      * Update schedule display
      */
     updateScheduleDisplay() {
@@ -628,9 +642,28 @@ class SecretaryApp {
 
         this.elements.emptyState.style.display = 'none';
         
-        // Update meta info (sanitized)
+        // Calculate total hours
+        const totalHours = this.calculateTotalHours(schedule);
+        const isOverloaded = totalHours > 8;
+        
+        // Update meta info (sanitized) with workload
+        let metaText = '';
         if (this.currentSchedule.summary) {
-            this.elements.scheduleMeta.textContent = this.currentSchedule.summary;
+            metaText = this.currentSchedule.summary;
+        }
+        
+        // Add workload information
+        const workloadText = `${totalHours} hours`;
+        const overloadWarning = isOverloaded ? ' ⚠️' : '';
+        metaText += ` • ${workloadText}${overloadWarning}`;
+        
+        this.elements.scheduleMeta.textContent = metaText;
+        
+        // Add visual styling for overloaded days
+        if (isOverloaded) {
+            this.elements.scheduleMeta.style.color = '#e74c3c'; // Red color for warning
+        } else {
+            this.elements.scheduleMeta.style.color = ''; // Reset to default
         }
 
         // Filter tasks based on current time
@@ -682,7 +715,7 @@ class SecretaryApp {
         const rolloverIndicator = task.isRollover ? '↻ ' : '';
 
         // Sanitize all user content to prevent XSS
-        const sanitizedTask = this.sanitizeHtml(task.task || '');
+        const sanitizedTask = this.sanitizeHtml(task.task || task.text || '');
         const sanitizedTime = this.sanitizeHtml(task.time || '');
         const sanitizedDuration = this.sanitizeHtml(task.duration || '');
         const sanitizedCategory = this.sanitizeHtml(task.category || 'task');
