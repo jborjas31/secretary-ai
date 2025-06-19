@@ -7,18 +7,26 @@ const STATIC_ASSETS = [
     './css/task-management.css',
     './css/calendar.css',
     './css/insights.css',
-    './js/app.js',
+    // Critical modules (cached immediately)
     './js/config.js',
     './js/performance-monitor.js',
-    './js/validation-utils.js',
+    './js/dom-diff.js',
     './js/event-manager.js',
-    './js/ui-components.js',
     './js/storage.js',
+    './js/module-loader.js',
+    './js/app-init.js',
+    
+    // Primary modules (cached for offline use)
+    './js/app.js',
+    './js/validation-utils.js',
+    './js/task-parser.js',
+    './js/llm-service.js',
     './js/firestore.js',
     './js/task-data-service.js',
     './js/schedule-data-service.js',
-    './js/task-parser.js',
-    './js/llm-service.js',
+    
+    // Secondary modules (cached on first use)
+    './js/ui-components.js',
     './js/pattern-analyzer.js',
     './js/insights-modal.js',
     './js/calendar-view.js',

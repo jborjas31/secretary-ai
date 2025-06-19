@@ -5,14 +5,16 @@
 
 class SecretaryApp {
     constructor() {
-        // Initialize services
+        // Initialize services (some will be lazy loaded)
         this.taskParser = new TaskParser();
         this.llmService = new LLMService();
         this.firestoreService = new FirestoreService();
         this.storageService = new StorageService();
         this.taskDataService = new TaskDataService();
         this.scheduleDataService = new ScheduleDataService();
-        this.patternAnalyzer = new PatternAnalyzer();
+        
+        // Lazy loaded services
+        this.patternAnalyzer = null; // Loaded when insights are accessed
         
         // App state
         this.currentSchedule = null;
@@ -161,11 +163,7 @@ class SecretaryApp {
         // Initialize task management components
         this.initializeTaskManagementComponents();
         
-        // Initialize calendar view
-        this.initializeCalendarView();
-        
-        // Initialize insights modal
-        this.initializeInsightsModal();
+        // Calendar and insights will be lazy loaded when first accessed
     }
 
     /**
@@ -199,10 +197,7 @@ class SecretaryApp {
             }
         }
 
-        // Initialize pattern analyzer
-        if (this.scheduleDataService) {
-            this.patternAnalyzer.initialize(this.scheduleDataService);
-        }
+        // Pattern analyzer will be initialized when first accessed
         
         // Configure LLM service
         if (this.settings && this.settings.openrouterApiKey) {
@@ -369,7 +364,8 @@ class SecretaryApp {
                     };
                 }
                 
-                // Add user behavior patterns from PatternAnalyzer
+                // Add user behavior patterns from PatternAnalyzer (lazy load if needed)
+                await this.ensurePatternAnalyzer();
                 const userPatterns = this.patternAnalyzer.getPatternsForLLM();
                 if (userPatterns && userPatterns.bestProductiveHours) {
                     context.recentPatterns = {
@@ -627,7 +623,8 @@ class SecretaryApp {
     updateScheduleDisplay() {
         if (!this.currentSchedule) {
             this.elements.emptyState.style.display = 'block';
-            this.elements.taskList.innerHTML = '';
+            // Use DOM diff to clear efficiently
+            domDiff.updateContainer(this.elements.taskList, [], () => null, () => '');
             return;
         }
 
@@ -635,7 +632,8 @@ class SecretaryApp {
         
         if (schedule.length === 0) {
             this.elements.emptyState.style.display = 'block';
-            this.elements.taskList.innerHTML = '';
+            // Use DOM diff to clear efficiently
+            domDiff.updateContainer(this.elements.taskList, [], () => null, () => '');
             this.elements.scheduleMeta.textContent = 'No tasks scheduled';
             return;
         }
@@ -684,10 +682,21 @@ class SecretaryApp {
             return taskMinutes >= currentMinutes;
         });
 
-        // Render tasks
-        this.elements.taskList.innerHTML = upcomingTasks.map(task => 
-            this.renderTaskItem(task)
-        ).join('');
+        // Use DOM diff for efficient rendering with performance tracking
+        const renderStartTime = performance.now();
+        domDiff.updateContainer(
+            this.elements.taskList,
+            upcomingTasks,
+            (task) => this.createTaskElement(task),
+            (task) => `schedule-task-${task.time}-${task.task || task.text}`
+        );
+        const renderEndTime = performance.now();
+        
+        // Track render performance
+        if (window.performanceMonitor) {
+            window.performanceMonitor.recordMetric('schedule-render', renderEndTime - renderStartTime);
+        }
+        console.log(`📊 Schedule rendered in ${(renderEndTime - renderStartTime).toFixed(2)}ms for ${upcomingTasks.length} tasks`);
 
         // Update meta with remaining tasks count
         if (upcomingTasks.length !== schedule.length) {
@@ -733,6 +742,64 @@ class SecretaryApp {
                 </div>
             </div>
         `;
+    }
+
+    /**
+     * Create task DOM element (for DOM diff)
+     */
+    createTaskElement(task) {
+        const div = document.createElement('div');
+        div.className = `task-item ${task.isRollover ? 'rollover-task' : ''}`;
+        
+        const categoryClass = task.category ? `task-category ${task.category}` : 'task-category';
+        const priorityIndicator = task.priority === 'high' ? '🔴' : 
+                                 task.priority === 'low' ? '🟡' : '🟠';
+        const rolloverIndicator = task.isRollover ? '↻ ' : '';
+
+        // Create time element
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'task-time';
+        timeDiv.textContent = task.time || '';
+        
+        // Create content element
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'task-content';
+        
+        // Create title element
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'task-title';
+        titleDiv.textContent = `${rolloverIndicator}${priorityIndicator} ${task.task || task.text || ''}`;
+        
+        // Create details element
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'task-details';
+        
+        // Add duration
+        const durationText = document.createTextNode(`Duration: ${task.duration || ''} `);
+        detailsDiv.appendChild(durationText);
+        
+        // Add category span
+        const categorySpan = document.createElement('span');
+        categorySpan.className = categoryClass;
+        categorySpan.textContent = task.category || 'task';
+        detailsDiv.appendChild(categorySpan);
+        
+        // Add rollover info if applicable
+        if (task.isRollover) {
+            const rolloverSpan = document.createElement('span');
+            rolloverSpan.className = 'rollover-info';
+            rolloverSpan.textContent = ` Rolled from ${task.rolloverFrom || 'previous day'}`;
+            detailsDiv.appendChild(document.createTextNode(' '));
+            detailsDiv.appendChild(rolloverSpan);
+        }
+        
+        // Assemble the structure
+        contentDiv.appendChild(titleDiv);
+        contentDiv.appendChild(detailsDiv);
+        div.appendChild(timeDiv);
+        div.appendChild(contentDiv);
+        
+        return div;
     }
 
     /**
@@ -1156,7 +1223,10 @@ class SecretaryApp {
     /**
      * Initialize task management UI components
      */
-    initializeTaskManagementComponents() {
+    async initializeTaskManagementComponents() {
+        // Load UI Components on demand
+        await window.loadUIComponents();
+        
         // Initialize search bar
         if (this.elements.searchBarContainer) {
             this.components.searchBar = new UIComponents.SearchBarComponent({
@@ -1197,6 +1267,72 @@ class SecretaryApp {
         globalEventManager.on(TaskEvents.TASK_COMPLETED, (data) => {
             this.handleTaskCompleted(data.taskId, data.completed);
         });
+    }
+
+    /**
+     * Ensure Pattern Analyzer is loaded
+     */
+    async ensurePatternAnalyzer() {
+        if (!this.patternAnalyzer) {
+            console.log('Loading Pattern Analyzer...');
+            if (!window.PatternAnalyzer) {
+                // Use global loadInsightsModal which also loads PatternAnalyzer
+                await window.loadInsightsModal();
+            }
+            this.patternAnalyzer = new PatternAnalyzer();
+            if (this.scheduleDataService) {
+                this.patternAnalyzer.initialize(this.scheduleDataService);
+            }
+        }
+    }
+
+    /**
+     * Ensure Calendar View is loaded
+     */
+    async ensureCalendarView() {
+        if (!this.components.calendarView) {
+            console.log('Loading Calendar View...');
+            const CalendarView = await window.loadCalendarView();
+            
+            this.components.calendarView = new CalendarView({
+                onDateSelect: (date) => {
+                    this.navigateToDate(date);
+                    this.components.calendarView.hide();
+                },
+                currentDate: this.currentViewDate
+            });
+            
+            // Add calendar button handler
+            if (this.elements.calendarToggleBtn) {
+                this.elements.calendarToggleBtn.addEventListener('click', () => {
+                    this.components.calendarView.toggle();
+                });
+            }
+        }
+    }
+
+    /**
+     * Ensure Insights Modal is loaded
+     */
+    async ensureInsightsModal() {
+        if (!this.components.insightsModal) {
+            console.log('Loading Insights Modal...');
+            await this.ensurePatternAnalyzer(); // Ensure pattern analyzer is loaded first
+            
+            const InsightsModal = await window.loadInsightsModal();
+            
+            this.components.insightsModal = new InsightsModal({
+                patternAnalyzer: this.patternAnalyzer
+            });
+            
+            // Add insights button handler
+            const insightsBtn = document.getElementById('insightsBtn');
+            if (insightsBtn) {
+                insightsBtn.addEventListener('click', () => {
+                    this.components.insightsModal.show();
+                });
+            }
+        }
     }
 
     /**
@@ -1306,35 +1442,45 @@ class SecretaryApp {
         const tasksBySection = this.groupTasksBySection(this.filteredTasks);
         console.log('📂 Display: Tasks grouped by section:', Object.keys(tasksBySection));
         
-        // Clear existing content
-        this.elements.taskSectionsContainer.innerHTML = '';
-        
         // Check if there are any tasks
         if (this.filteredTasks.length === 0) {
             console.log('📭 No filtered tasks - showing empty state');
             this.elements.taskManagementEmpty.style.display = 'block';
+            // Use DOM diff to clear efficiently
+            domDiff.updateContainer(this.elements.taskSectionsContainer, [], () => null, () => '');
             return;
         } else {
             this.elements.taskManagementEmpty.style.display = 'none';
         }
 
-        // Render each section
+        // Prepare sections data for DOM diff
         const sectionOrder = ['todayTasks', 'upcomingTasks', 'dailyTasks', 'weeklyTasks', 'monthlyTasks', 'yearlyTasks', 'undatedTasks'];
-        console.log('🔢 Section rendering order:', sectionOrder);
+        const sectionsToRender = [];
         
-        let sectionsRendered = 0;
         sectionOrder.forEach(sectionKey => {
             const tasks = tasksBySection[sectionKey];
-            console.log(`📋 Section ${sectionKey}:`, tasks ? tasks.length : 0, 'tasks');
             if (tasks && tasks.length > 0) {
-                const sectionElement = this.createTaskSection(sectionKey, tasks);
-                this.elements.taskSectionsContainer.appendChild(sectionElement);
-                sectionsRendered++;
-                console.log(`✅ Rendered section: ${sectionKey} with ${tasks.length} tasks`);
+                sectionsToRender.push({ key: sectionKey, tasks });
             }
         });
         
-        console.log(`🎨 Total sections rendered: ${sectionsRendered}`);
+        // Use DOM diff for efficient section rendering with performance tracking
+        const renderStartTime = performance.now();
+        domDiff.updateContainer(
+            this.elements.taskSectionsContainer,
+            sectionsToRender,
+            (section) => this.createTaskSection(section.key, section.tasks),
+            (section) => `section-${section.key}`
+        );
+        const renderEndTime = performance.now();
+        
+        // Track render performance
+        if (window.performanceMonitor) {
+            window.performanceMonitor.recordMetric('task-management-render', renderEndTime - renderStartTime);
+        }
+        
+        const totalTasks = sectionsToRender.reduce((sum, section) => sum + section.tasks.length, 0);
+        console.log(`🎨 Task management rendered in ${(renderEndTime - renderStartTime).toFixed(2)}ms | Sections: ${sectionsToRender.length} | Tasks: ${totalTasks}`);
     }
 
     /**
@@ -1365,25 +1511,49 @@ class SecretaryApp {
             undatedTasks: 'Undated'
         };
 
+        // Create section container
         const sectionElement = document.createElement('div');
         sectionElement.className = 'collapsible-section';
-        sectionElement.innerHTML = `
-            <div class="section-header" data-section="${sectionKey}">
-                <h3 class="section-title">
-                    ${sectionNames[sectionKey] || sectionKey}
-                    <span class="section-count">${tasks.length}</span>
-                </h3>
-                <span class="section-toggle">▼</span>
-            </div>
-            <div class="section-content expanded">
-                <div class="section-task-list" data-section="${sectionKey}"></div>
-            </div>
-        `;
-
-        // Add click handler for collapsible header
-        const header = sectionElement.querySelector('.section-header');
-        const content = sectionElement.querySelector('.section-content');
-        const toggle = sectionElement.querySelector('.section-toggle');
+        
+        // Create header
+        const header = document.createElement('div');
+        header.className = 'section-header';
+        header.dataset.section = sectionKey;
+        
+        // Create title
+        const h3 = document.createElement('h3');
+        h3.className = 'section-title';
+        h3.textContent = sectionNames[sectionKey] || sectionKey;
+        
+        // Create count span
+        const countSpan = document.createElement('span');
+        countSpan.className = 'section-count';
+        countSpan.textContent = tasks.length.toString();
+        h3.appendChild(document.createTextNode(' '));
+        h3.appendChild(countSpan);
+        
+        // Create toggle
+        const toggle = document.createElement('span');
+        toggle.className = 'section-toggle';
+        toggle.textContent = '▼';
+        
+        // Assemble header
+        header.appendChild(h3);
+        header.appendChild(toggle);
+        
+        // Create content container
+        const content = document.createElement('div');
+        content.className = 'section-content expanded';
+        
+        // Create task list container
+        const taskListDiv = document.createElement('div');
+        taskListDiv.className = 'section-task-list';
+        taskListDiv.dataset.section = sectionKey;
+        content.appendChild(taskListDiv);
+        
+        // Assemble section
+        sectionElement.appendChild(header);
+        sectionElement.appendChild(content);
         
         header.addEventListener('click', () => {
             content.classList.toggle('expanded');
@@ -1392,6 +1562,13 @@ class SecretaryApp {
 
         // Render tasks in this section
         const taskListElement = sectionElement.querySelector('.section-task-list');
+        
+        // UIComponents should already be loaded when we get here (from initializeTaskManagementComponents)
+        if (!window.UIComponents) {
+            console.error('UIComponents not loaded when creating task section');
+            return sectionElement;
+        }
+        
         const taskListComponent = new UIComponents.TaskListComponent({
             tasks: tasks,
             onTaskClick: (taskId) => this.handleTaskClick(taskId),
@@ -1453,7 +1630,10 @@ class SecretaryApp {
     /**
      * Show task form for creating or editing
      */
-    showTaskForm(mode, task = null) {
+    async showTaskForm(mode, task = null) {
+        // Ensure UI Components are loaded
+        await window.loadUIComponents();
+        
         // Remove existing form if any
         if (this.components.taskForm) {
             this.components.taskForm.destroy();
@@ -2133,11 +2313,9 @@ class SecretaryApp {
     /**
      * Show insights modal
      */
-    showInsights() {
-        if (!this.components.insightsModal) {
-            console.warn('Insights modal not initialized');
-            return;
-        }
+    async showInsights() {
+        // Ensure insights modal is loaded
+        await this.ensureInsightsModal();
         
         this.components.insightsModal.show();
     }
@@ -2145,11 +2323,9 @@ class SecretaryApp {
     /**
      * Toggle calendar visibility
      */
-    toggleCalendar() {
-        if (!this.components.calendarView) {
-            console.warn('Calendar view not initialized');
-            return;
-        }
+    async toggleCalendar() {
+        // Ensure calendar view is loaded
+        await this.ensureCalendarView();
         
         this.components.calendarView.toggle();
         this.elements.calendarToggleBtn.classList.toggle('active');
@@ -2224,22 +2400,8 @@ class SecretaryApp {
     }
 }
 
-// Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.app = new SecretaryApp();
-    window.app.initialize();
-});
+// Export the class
+export { SecretaryApp };
 
-// Add CSS for toast animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
+// Also make it available globally for compatibility
+window.SecretaryApp = SecretaryApp;

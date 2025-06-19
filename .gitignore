@@ -56,3 +56,9 @@ build/
 *.tmp
 *.tempconsole_output.md
 console_output.md
+
+# Test files
+test-dom-diff.html
+test-lazy-loading.html
+DOM_OPTIMIZATION_SUMMARY.md
+JS_LOADING_OPTIMIZATION_SUMMARY.md
