@@ -44,6 +44,10 @@ class LLMService {
         }
 
         try {
+            // Create timeout controller (30 seconds)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            
             const response = await fetch(this.baseUrl, {
                 method: 'POST',
                 headers: {
@@ -52,8 +56,12 @@ class LLMService {
                     'HTTP-Referer': window.location.origin, // Required for OpenRouter app identification
                     'X-Title': 'Secretary AI - Daily Task Scheduler' // App title for OpenRouter leaderboards
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
+            
+            // Clear timeout if request completes
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -76,6 +84,12 @@ class LLMService {
             const data = await response.json();
             return data;
         } catch (error) {
+            // Handle timeout specifically
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out after 30 seconds. Please try again.');
+            }
+            
+            // Retry logic for other errors
             if (attempt < this.maxRetries && !error.message.includes('API key') && !error.message.includes('credits')) {
                 console.warn(`Request failed (attempt ${attempt}), retrying...`, error);
                 await this.delay(this.retryDelay * attempt);

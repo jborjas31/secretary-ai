@@ -258,6 +258,10 @@ class SecretaryApp {
                 console.log('Using mock data');
                 this.currentSchedule = MOCK_DATA.schedule;
                 this.setStatus('offline', 'Using sample data (development mode)');
+            } else if (!this.isOnline) {
+                // Clear offline message
+                this.setStatus('offline', 'You\'re offline - schedule generation unavailable');
+                this.showToast('You\'re offline. Connect to internet to generate schedules.', 'info');
             } else {
                 this.setStatus('offline', 'Failed to load schedule');
                 this.showError('Failed to load your schedule', error);
@@ -368,10 +372,27 @@ class SecretaryApp {
                     };
                 }
                 
-                // Generate schedule with context
-                schedule = await window.performanceMonitor.measureAsync('llm.generateSchedule',
-                    async () => await this.llmService.generateDailySchedule(allTasks, targetDate, context)
-                );
+                // Generate schedule with context (with one retry for network errors)
+                try {
+                    schedule = await window.performanceMonitor.measureAsync('llm.generateSchedule',
+                        async () => await this.llmService.generateDailySchedule(allTasks, targetDate, context)
+                    );
+                } catch (error) {
+                    // Retry once for network/timeout errors
+                    if (error.message.includes('network') || error.message.includes('timed out') || error.message.includes('Failed to fetch')) {
+                        console.log('Network error detected, retrying once...');
+                        this.showToast('Network error - retrying...', 'info');
+                        
+                        // Wait 2 seconds before retry
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        schedule = await window.performanceMonitor.measureAsync('llm.generateSchedule.retry',
+                            async () => await this.llmService.generateDailySchedule(allTasks, targetDate, context)
+                        );
+                    } else {
+                        throw error;
+                    }
+                }
                 
                 // Save to storage using ScheduleDataService
                 const dateKey = targetDate.toISOString().split('T')[0];
@@ -390,7 +411,30 @@ class SecretaryApp {
             return schedule;
         } catch (error) {
             console.error('Error generating schedule:', error);
-            this.setStatus('offline', 'Failed to generate schedule');
+            
+            // Provide specific error messages based on the error type
+            if (error.message.includes('Invalid API key')) {
+                this.setStatus('offline', 'Invalid API key');
+                this.showToast('Invalid API key - please check your settings', 'error');
+            } else if (error.message.includes('Insufficient credits')) {
+                this.setStatus('offline', 'API credits exhausted');
+                this.showToast('API credits exhausted - using fallback scheduling', 'warning');
+                // Use fallback schedule instead of throwing
+                const fallbackSchedule = this.llmService.createFallbackSchedule(allTasks, targetDate);
+                this.lastRefresh = new Date();
+                endMeasure();
+                return fallbackSchedule;
+            } else if (error.message.includes('Request timed out')) {
+                this.setStatus('offline', 'Request timed out');
+                this.showToast('Request timed out - please try again', 'error');
+            } else if (!this.isOnline) {
+                this.setStatus('offline', 'No internet connection');
+                this.showToast('No internet connection - cannot generate schedule', 'info');
+            } else {
+                this.setStatus('offline', 'Failed to generate schedule');
+                this.showToast('Failed to generate schedule - please try again', 'error');
+            }
+            
             endMeasure();
             throw error;
         } finally {
@@ -1862,7 +1906,12 @@ class SecretaryApp {
             endMeasure();
         } catch (error) {
             console.error('Error loading schedule for date:', error);
-            this.showError('Failed to load schedule', error);
+            if (!this.isOnline) {
+                this.setStatus('offline', 'You\'re offline - using cached schedules only');
+                this.showToast('Connect to internet to generate new schedules', 'info');
+            } else {
+                this.showError('Failed to load schedule', error);
+            }
             endMeasure();
         }
     }
