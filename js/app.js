@@ -296,13 +296,13 @@ class SecretaryApp {
                 
                 // Filter out rollover tasks that already exist in relevant tasks
                 const existingTaskTexts = new Set(
-                    relevantTasks.map(task => task.text.trim().toLowerCase())
+                    relevantTasks.map(task => task.task.trim().toLowerCase())
                 );
                 
                 const uniqueRolloverTasks = rolloverResult.tasks.filter(rolloverTask => {
-                    const normalizedText = rolloverTask.text.trim().toLowerCase();
+                    const normalizedText = rolloverTask.task.trim().toLowerCase();
                     if (existingTaskTexts.has(normalizedText)) {
-                        console.log(`Skipping duplicate rollover task: ${rolloverTask.text}`);
+                        console.log(`Skipping duplicate rollover task: ${rolloverTask.task}`);
                         return false;
                     }
                     return true;
