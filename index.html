@@ -7,6 +7,8 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/task-management.css">
+    <link rel="stylesheet" href="css/calendar.css">
+    <link rel="stylesheet" href="css/insights.css">
     <meta name="theme-color" content="#2c3e50">
     <meta name="description" content="AI-powered chronological daily task scheduler">
     <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
@@ -23,6 +25,8 @@
                 </div>
             </div>
             <div class="header-controls">
+                <button class="insights-btn" id="insightsBtn" title="View Productivity Insights">📊</button>
+                <button class="calendar-toggle-btn" id="calendarToggleBtn" title="Show Calendar">📅</button>
                 <button class="view-toggle-btn" id="viewToggleBtn" title="Toggle Task Management">📋</button>
                 <button class="refresh-btn" id="refreshBtn" title="Refresh Schedule">🔄</button>
             </div>
@@ -37,7 +41,16 @@
             <!-- Schedule View (Default) -->
             <div class="schedule-container" id="scheduleView">
                 <div class="schedule-header">
-                    <h2>Your Schedule for Today</h2>
+                    <div class="date-navigation">
+                        <button class="date-nav-btn" id="prevDateBtn" title="Previous day">◀</button>
+                        <div class="current-date-display">
+                            <h2 id="scheduleTitle">Your Schedule for Today</h2>
+                            <button class="date-picker-btn" id="datePickerBtn">
+                                <span id="currentDateDisplay"></span>
+                            </button>
+                        </div>
+                        <button class="date-nav-btn" id="nextDateBtn" title="Next day">▶</button>
+                    </div>
                     <div class="schedule-meta" id="scheduleMeta"></div>
                 </div>
                 
@@ -92,7 +105,12 @@
             <div class="modal-body">
                 <div class="setting-group">
                     <label for="openrouterKey">OpenRouter API Key:</label>
-                    <input type="password" id="openrouterKey" placeholder="sk-or-...">
+                    <div class="input-with-toggle">
+                        <input type="password" id="openrouterKey" placeholder="sk-or-...">
+                        <button type="button" class="toggle-visibility" id="toggleApiKeyVisibility" title="Toggle visibility">
+                            <span class="toggle-icon">👁️</span>
+                        </button>
+                    </div>
                     <small>Required for AI schedule generation</small>
                 </div>
                 <div class="setting-group">
@@ -120,6 +138,13 @@
                         <option value="0">Manual only</option>
                     </select>
                 </div>
+                <div class="setting-group">
+                    <label>Task Management:</label>
+                    <button class="btn btn-secondary" id="deduplicateBtn" style="margin-top: 10px;">
+                        Remove Duplicate Tasks
+                    </button>
+                    <small>Clean up any duplicate tasks in your database</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="saveSettings">Save Settings</button>
@@ -134,6 +159,7 @@
 
     <!-- Scripts -->
     <script src="js/config.js"></script>
+    <script src="js/performance-monitor.js"></script>
     <script src="js/validation-utils.js"></script>
     <script src="js/event-manager.js"></script>
     <script src="js/ui-components.js"></script>
@@ -143,6 +169,9 @@
     <script src="js/schedule-data-service.js"></script>
     <script src="js/task-parser.js"></script>
     <script src="js/llm-service.js"></script>
+    <script src="js/pattern-analyzer.js"></script>
+    <script src="js/insights-modal.js"></script>
+    <script src="js/calendar-view.js"></script>
     <script src="js/app.js"></script>
 
     <script>

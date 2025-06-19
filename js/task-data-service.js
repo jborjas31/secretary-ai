@@ -83,6 +83,27 @@ class TaskDataService {
 
         try {
             const taskData = this.createTaskData(taskInput);
+            
+            // Check for duplicates before creating
+            const existingTasks = await this.getAllTasks();
+            const normalizedNewText = taskData.text.trim().toLowerCase();
+            
+            // Check for exact or very similar duplicates
+            const duplicate = existingTasks.find(task => {
+                const normalizedExistingText = task.text.trim().toLowerCase();
+                // Check for exact match or if one contains the other (allowing minor variations)
+                return normalizedExistingText === normalizedNewText ||
+                       (task.section === taskData.section && 
+                        (normalizedExistingText.includes(normalizedNewText) || 
+                         normalizedNewText.includes(normalizedExistingText)));
+            });
+            
+            if (duplicate) {
+                console.warn(`Duplicate task detected: "${taskData.text}" already exists as "${duplicate.text}"`);
+                // Return the existing task instead of creating a duplicate
+                return duplicate;
+            }
+            
             const { setDoc } = this.firestoreService.firestoreModules;
             
             // Get document reference
@@ -553,14 +574,30 @@ class TaskDataService {
                     console.log(`🔍 Found ${tasks.length} duplicates for: ${tasks[0].text}`);
                     duplicateCount += tasks.length - 1;
                     
-                    // Sort by createdAt to keep the oldest
+                    // Sort by multiple criteria to keep the best version
                     tasks.sort((a, b) => {
+                        // First priority: Keep completed tasks over incomplete
+                        if (a.completed !== b.completed) {
+                            return a.completed ? -1 : 1;
+                        }
+                        
+                        // Second priority: Keep tasks with more details (subTasks, reminders)
+                        const aDetails = (a.subTasks?.length || 0) + (a.reminders?.length || 0);
+                        const bDetails = (b.subTasks?.length || 0) + (b.reminders?.length || 0);
+                        if (aDetails !== bDetails) {
+                            return bDetails - aDetails; // Higher detail count first
+                        }
+                        
+                        // Third priority: Keep older tasks (by createdAt)
                         const dateA = new Date(a.createdAt || '2000-01-01');
                         const dateB = new Date(b.createdAt || '2000-01-01');
                         return dateA - dateB;
                     });
                     
-                    // Mark all but the first (oldest) for deletion
+                    // Log which one we're keeping
+                    console.log(`✅ Keeping: "${tasks[0].text}" (completed: ${tasks[0].completed}, details: ${(tasks[0].subTasks?.length || 0) + (tasks[0].reminders?.length || 0)})`);
+                    
+                    // Mark all but the first (best) for deletion
                     for (let i = 1; i < tasks.length; i++) {
                         duplicatesToDelete.push(tasks[i].id);
                     }

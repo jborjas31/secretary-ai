@@ -12,6 +12,7 @@ class SecretaryApp {
         this.storageService = new StorageService();
         this.taskDataService = new TaskDataService();
         this.scheduleDataService = new ScheduleDataService();
+        this.patternAnalyzer = new PatternAnalyzer();
         
         // App state
         this.currentSchedule = null;
@@ -20,6 +21,10 @@ class SecretaryApp {
         this.lastRefresh = null;
         this.settings = null;
         this.migrationInProgress = false;
+        
+        // Date navigation state
+        this.currentViewDate = new Date(); // Date being viewed
+        this.schedulesCache = new Map(); // Cache schedules by date
         
         // Task management state
         this.viewMode = 'schedule'; // 'schedule' or 'manage'
@@ -40,7 +45,9 @@ class SecretaryApp {
             searchBar: null,
             floatingActionButton: null,
             taskForm: null,
-            taskSections: {}
+            taskSections: {},
+            calendarView: null,
+            insightsModal: null
         };
         
         // Bind methods
@@ -120,6 +127,7 @@ class SecretaryApp {
             modelSelect: document.getElementById('modelSelect'),
             refreshInterval: document.getElementById('refreshInterval'),
             saveSettings: document.getElementById('saveSettings'),
+            toggleApiKeyVisibility: document.getElementById('toggleApiKeyVisibility'),
             loadingOverlay: document.getElementById('loadingOverlay'),
             
             // Model badge elements
@@ -133,7 +141,17 @@ class SecretaryApp {
             searchBarContainer: document.getElementById('searchBarContainer'),
             filterControlsContainer: document.getElementById('filterControlsContainer'),
             taskSectionsContainer: document.getElementById('taskSectionsContainer'),
-            taskManagementEmpty: document.getElementById('taskManagementEmpty')
+            taskManagementEmpty: document.getElementById('taskManagementEmpty'),
+            
+            // Date navigation elements
+            prevDateBtn: document.getElementById('prevDateBtn'),
+            nextDateBtn: document.getElementById('nextDateBtn'),
+            datePickerBtn: document.getElementById('datePickerBtn'),
+            currentDateDisplay: document.getElementById('currentDateDisplay'),
+            scheduleTitle: document.getElementById('scheduleTitle'),
+            
+            // Calendar elements
+            calendarToggleBtn: document.getElementById('calendarToggleBtn')
         };
 
         // Update current time
@@ -142,6 +160,12 @@ class SecretaryApp {
         
         // Initialize task management components
         this.initializeTaskManagementComponents();
+        
+        // Initialize calendar view
+        this.initializeCalendarView();
+        
+        // Initialize insights modal
+        this.initializeInsightsModal();
     }
 
     /**
@@ -175,6 +199,11 @@ class SecretaryApp {
             }
         }
 
+        // Initialize pattern analyzer
+        if (this.scheduleDataService) {
+            this.patternAnalyzer.initialize(this.scheduleDataService);
+        }
+        
         // Configure LLM service
         if (this.settings && this.settings.openrouterApiKey) {
             this.llmService.setApiKey(this.settings.openrouterApiKey);
@@ -219,19 +248,8 @@ class SecretaryApp {
             await this.taskParser.loadAndParseTasks();
             console.log('Tasks loaded and cached for Task Management');
             
-            // Try to load today's schedule from cache first
-            const today = new Date().toISOString().split('T')[0];
-            const cachedSchedule = await this.storageService.loadSchedule(today);
-            
-            if (cachedSchedule && this.isScheduleRecent(cachedSchedule)) {
-                console.log('Using cached schedule');
-                this.currentSchedule = cachedSchedule;
-                this.setStatus('online', 'Schedule loaded from cache');
-                return;
-            }
-
-            // Generate new schedule
-            await this.generateSchedule();
+            // Load schedule for current view date
+            await this.loadScheduleForDate(this.currentViewDate);
         } catch (error) {
             console.error('Error loading initial data:', error);
             
@@ -250,45 +268,130 @@ class SecretaryApp {
     /**
      * Generate a new schedule using LLM
      */
-    async generateSchedule() {
+    async generateSchedule(targetDate = new Date()) {
+        const endMeasure = window.performanceMonitor.startMeasure('generateSchedule');
         this.setStatus('loading', 'Generating your schedule...');
         this.showLoading(true);
 
         try {
             // Parse tasks
-            const tasks = await this.taskParser.loadAndParseTasks();
-            const relevantTasks = this.taskParser.formatTasksForLLM(tasks);
+            const tasks = await window.performanceMonitor.measureAsync('taskParser.loadAndParse', 
+                async () => await this.taskParser.loadAndParseTasks()
+            );
+            const relevantTasks = this.taskParser.formatTasksForLLM(tasks, targetDate);
 
-            if (relevantTasks.length === 0) {
+            // Check for rollover tasks from previous day
+            const rolloverResult = await window.performanceMonitor.measureAsync('checkForRollovers',
+                async () => await this.scheduleDataService.checkForRollovers(targetDate)
+            );
+            
+            // Combine relevant tasks with rollover tasks (but avoid duplicates)
+            const allTasks = [...relevantTasks];
+            if (rolloverResult.hasIncomplete) {
+                console.log(`Found ${rolloverResult.tasks.length} incomplete tasks from ${rolloverResult.fromDate}`);
+                
+                // Filter out rollover tasks that already exist in relevant tasks
+                const existingTaskTexts = new Set(
+                    relevantTasks.map(task => task.text.trim().toLowerCase())
+                );
+                
+                const uniqueRolloverTasks = rolloverResult.tasks.filter(rolloverTask => {
+                    const normalizedText = rolloverTask.text.trim().toLowerCase();
+                    if (existingTaskTexts.has(normalizedText)) {
+                        console.log(`Skipping duplicate rollover task: ${rolloverTask.text}`);
+                        return false;
+                    }
+                    return true;
+                });
+                
+                console.log(`Adding ${uniqueRolloverTasks.length} unique rollover tasks`);
+                allTasks.push(...uniqueRolloverTasks);
+            }
+
+            if (allTasks.length === 0) {
                 this.setStatus('online', 'No tasks found');
-                this.currentSchedule = {
+                const schedule = {
                     schedule: [],
                     summary: 'No tasks available for scheduling.',
                     generatedAt: new Date().toISOString(),
+                    targetDate: targetDate.toISOString(),
                     empty: true
                 };
-                return;
+                return schedule;
             }
 
             // Generate schedule with LLM
+            let schedule;
             if (this.llmService.isConfigured()) {
-                this.currentSchedule = await this.llmService.generateDailySchedule(relevantTasks);
+                // Load multi-day context for enhanced scheduling
+                const context = await window.performanceMonitor.measureAsync('loadMultiDayContext',
+                    async () => await this.scheduleDataService.loadMultiDayContext(targetDate, 2, 3)
+                );
                 
-                // Save to storage
-                const today = new Date().toISOString().split('T')[0];
-                await this.storageService.saveSchedule(today, this.currentSchedule);
+                // Add rollover tasks to context
+                context.rolloverTasks = rolloverResult.tasks;
                 
-                this.setStatus('online', 'Schedule generated successfully');
+                // Get current workload for today
+                const currentWorkload = await this.scheduleDataService.calculateDailyCapacity({
+                    schedule: allTasks.map(task => ({
+                        ...task,
+                        duration: task.duration || '30 minutes'
+                    }))
+                });
+                context.currentWorkload = currentWorkload;
+                
+                // Prepare upcoming schedules summary for context
+                if (context.upcomingDays) {
+                    context.upcomingSchedules = context.upcomingDays.map(day => ({
+                        date: day.key,
+                        taskCount: day.workload?.taskCount || 0,
+                        totalHours: day.workload?.totalHours || 0,
+                        isOverloaded: day.workload?.isOverloaded || false
+                    }));
+                }
+                
+                // Add recent patterns from previous days
+                if (context.patterns) {
+                    context.recentPatterns = {
+                        averageCompletion: context.patterns.averageCompletion.rate,
+                        averageTasksCompleted: context.patterns.averageCompletion.tasksPerDay,
+                        averageHoursPerDay: context.patterns.averageCompletion.hoursPerDay
+                    };
+                }
+                
+                // Add user behavior patterns from PatternAnalyzer
+                const userPatterns = this.patternAnalyzer.getPatternsForLLM();
+                if (userPatterns && userPatterns.bestProductiveHours) {
+                    context.recentPatterns = {
+                        ...context.recentPatterns,
+                        ...userPatterns
+                    };
+                }
+                
+                // Generate schedule with context
+                schedule = await window.performanceMonitor.measureAsync('llm.generateSchedule',
+                    async () => await this.llmService.generateDailySchedule(allTasks, targetDate, context)
+                );
+                
+                // Save to storage using ScheduleDataService
+                const dateKey = targetDate.toISOString().split('T')[0];
+                await this.scheduleDataService.saveSchedule(dateKey, schedule);
+                
+                this.setStatus('online', 'Schedule generated successfully' + 
+                    (rolloverResult.hasIncomplete ? ` (includes ${rolloverResult.tasks.length} rollover tasks)` : ''));
             } else {
                 // Use fallback scheduling
-                this.currentSchedule = this.llmService.createFallbackSchedule(relevantTasks, new Date());
+                schedule = this.llmService.createFallbackSchedule(allTasks, targetDate);
                 this.setStatus('offline', 'OpenRouter API not configured - using basic scheduling');
             }
 
             this.lastRefresh = new Date();
+            endMeasure();
+            return schedule;
         } catch (error) {
             console.error('Error generating schedule:', error);
             this.setStatus('offline', 'Failed to generate schedule');
+            endMeasure();
             throw error;
         } finally {
             this.showLoading(false);
@@ -319,7 +422,9 @@ class SecretaryApp {
         }
 
         try {
-            await this.generateSchedule();
+            const newSchedule = await this.generateSchedule(this.currentViewDate);
+            this.currentSchedule = newSchedule;
+            this.schedulesCache.set(this.getDateKey(this.currentViewDate), newSchedule);
             this.updateUI();
             this.showToast('Schedule refreshed', 'success');
         } catch (error) {
@@ -350,14 +455,35 @@ class SecretaryApp {
 
         // View toggle button
         this.elements.viewToggleBtn.addEventListener('click', this.toggleViewMode);
+        
+        // Calendar toggle button
+        this.elements.calendarToggleBtn.addEventListener('click', () => this.toggleCalendar());
 
         // Model badge click to open settings
         this.elements.modelBadge.addEventListener('click', () => this.openSettings());
+        
+        // Date navigation
+        this.elements.prevDateBtn.addEventListener('click', () => this.navigateDate(-1));
+        this.elements.nextDateBtn.addEventListener('click', () => this.navigateDate(1));
+        this.elements.datePickerBtn.addEventListener('click', () => this.showDatePicker());
 
         // Settings modal
         this.elements.settingsBtn.addEventListener('click', () => this.openSettings());
         this.elements.modalClose.addEventListener('click', () => this.closeSettings());
         this.elements.saveSettings.addEventListener('click', () => this.saveSettings());
+        this.elements.toggleApiKeyVisibility.addEventListener('click', () => this.toggleApiKeyVisibility());
+        
+        // Deduplication button
+        const deduplicateBtn = document.getElementById('deduplicateBtn');
+        if (deduplicateBtn) {
+            deduplicateBtn.addEventListener('click', async () => {
+                deduplicateBtn.disabled = true;
+                deduplicateBtn.textContent = 'Removing duplicates...';
+                await this.manualDeduplication();
+                deduplicateBtn.disabled = false;
+                deduplicateBtn.textContent = 'Remove Duplicate Tasks';
+            });
+        }
 
         // Close modal on backdrop click
         this.elements.settingsModal.addEventListener('click', (e) => {
@@ -386,6 +512,35 @@ class SecretaryApp {
                 }
             });
         }
+        
+        // Keyboard shortcuts for date navigation
+        document.addEventListener('keydown', (e) => {
+            // Only handle in schedule view
+            if (this.viewMode !== 'schedule') return;
+            
+            // Don't handle if user is typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.navigateDate(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.navigateDate(1);
+            } else if (e.key === 't' || e.key === 'T') {
+                // Go to today
+                e.preventDefault();
+                this.currentViewDate = new Date();
+                this.loadScheduleForDate(this.currentViewDate);
+                this.updateUI();
+            } else if (e.key === 'p' || e.key === 'P') {
+                // Show performance report
+                e.preventDefault();
+                console.log('=== Performance Report ===');
+                window.performanceMonitor.logReport();
+                this.showToast('Performance report logged to console', 'info');
+            }
+        });
     }
 
     /**
@@ -394,6 +549,7 @@ class SecretaryApp {
     updateUI() {
         if (this.viewMode === 'schedule') {
             this.updateScheduleDisplay();
+            this.updateDateDisplay();
         } else {
             this.updateTaskManagementDisplay();
         }
@@ -473,6 +629,7 @@ class SecretaryApp {
         const categoryClass = task.category ? `task-category ${task.category}` : 'task-category';
         const priorityIndicator = task.priority === 'high' ? '🔴' : 
                                  task.priority === 'low' ? '🟡' : '🟠';
+        const rolloverIndicator = task.isRollover ? '↻ ' : '';
 
         // Sanitize all user content to prevent XSS
         const sanitizedTask = this.sanitizeHtml(task.task || '');
@@ -481,13 +638,14 @@ class SecretaryApp {
         const sanitizedCategory = this.sanitizeHtml(task.category || 'task');
 
         return `
-            <div class="task-item">
+            <div class="task-item ${task.isRollover ? 'rollover-task' : ''}">
                 <div class="task-time">${sanitizedTime}</div>
                 <div class="task-content">
-                    <div class="task-title">${priorityIndicator} ${sanitizedTask}</div>
+                    <div class="task-title">${rolloverIndicator}${priorityIndicator} ${sanitizedTask}</div>
                     <div class="task-details">
                         Duration: ${sanitizedDuration}
                         <span class="${categoryClass}">${sanitizedCategory}</span>
+                        ${task.isRollover ? `<span class="rollover-info">Rolled from ${task.rolloverFrom || 'previous day'}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -579,6 +737,24 @@ class SecretaryApp {
     }
 
     /**
+     * Toggle API key visibility
+     */
+    toggleApiKeyVisibility() {
+        const input = this.elements.openrouterKey;
+        const icon = this.elements.toggleApiKeyVisibility.querySelector('.toggle-icon');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = '👁️‍🗨️';
+            this.elements.toggleApiKeyVisibility.title = 'Hide API key';
+        } else {
+            input.type = 'password';
+            icon.textContent = '👁️';
+            this.elements.toggleApiKeyVisibility.title = 'Show API key';
+        }
+    }
+
+    /**
      * Save settings
      */
     async saveSettings() {
@@ -666,21 +842,34 @@ class SecretaryApp {
         try {
             // Get last migration timestamp from localStorage
             const lastMigration = localStorage.getItem('lastTaskMigrationTimestamp');
+            const lastMigrationVersion = localStorage.getItem('lastTaskMigrationVersion') || '1.0';
+            const currentMigrationVersion = '1.1'; // Increment this when migration logic changes
             
             // Check if we have any tasks in Firestore
             const migrationStatus = await this.taskParser.checkMigrationStatus(this.taskDataService);
             
             // Only migrate if:
-            // 1. Never migrated before AND
-            // 2. Firestore has NO tasks at all
+            // 1. Never migrated before AND Firestore has NO tasks at all
+            // 2. OR migration version has changed (for critical updates)
             if (!lastMigration && migrationStatus.taskCount === 0) {
                 console.log('First-time migration needed - no tasks in Firestore');
+                return true;
+            }
+            
+            // If migration version changed and we need to fix issues
+            if (lastMigrationVersion !== currentMigrationVersion && migrationStatus.taskCount === 0) {
+                console.log('Migration version changed - re-migration needed');
+                localStorage.setItem('lastTaskMigrationVersion', currentMigrationVersion);
                 return true;
             }
             
             // If we have any tasks in Firestore, don't migrate
             // This prevents re-migration even if tasks.md has new items
             if (migrationStatus.taskCount > 0) {
+                // Save current version if not saved
+                if (lastMigrationVersion !== currentMigrationVersion) {
+                    localStorage.setItem('lastTaskMigrationVersion', currentMigrationVersion);
+                }
                 return false;
             }
             
@@ -704,9 +893,23 @@ class SecretaryApp {
                 return;
             }
 
-            // Check if migration is already in progress
-            if (this.migrationInProgress) {
-                return; // Silently skip
+            // Use a more robust migration lock
+            const migrationLockKey = 'secretaryai_migration_lock';
+            const existingLock = localStorage.getItem(migrationLockKey);
+            
+            // Check if migration is locked (in progress)
+            if (existingLock) {
+                const lockTime = new Date(existingLock);
+                const lockAge = Date.now() - lockTime.getTime();
+                
+                // If lock is older than 5 minutes, assume it's stale and remove it
+                if (lockAge > 5 * 60 * 1000) {
+                    console.log('Removing stale migration lock');
+                    localStorage.removeItem(migrationLockKey);
+                } else {
+                    console.log('Migration already in progress, skipping');
+                    return;
+                }
             }
 
             // Check if migration is needed
@@ -717,6 +920,9 @@ class SecretaryApp {
             }
             
             console.log('🧪 Checking task migration status...');
+            
+            // Set migration lock
+            localStorage.setItem(migrationLockKey, new Date().toISOString());
             this.migrationInProgress = true;
 
             // Check current migration status
@@ -752,27 +958,23 @@ class SecretaryApp {
                 const totalTasksInMd = Object.values(parsedTasks).reduce((total, section) => 
                     Array.isArray(section) ? total + section.length : total, 0);
                 
-                if (totalTasksInMd > migrationStatus.taskCount) {
-                    console.log(`⚠️ Incomplete migration detected: ${migrationStatus.taskCount} tasks in Firestore, but ${totalTasksInMd} tasks in tasks.md`);
-                    console.log('🔄 Re-running migration to include all sections...');
+                // Only re-migrate if there's a significant difference (more than 10% or 5 tasks)
+                const taskDifference = totalTasksInMd - migrationStatus.taskCount;
+                const percentDifference = (taskDifference / migrationStatus.taskCount) * 100;
+                
+                if (taskDifference > 5 && percentDifference > 10) {
+                    console.log(`⚠️ Significant task difference detected: ${migrationStatus.taskCount} tasks in Firestore, but ${totalTasksInMd} tasks in tasks.md`);
+                    console.log(`📊 Difference: ${taskDifference} tasks (${percentDifference.toFixed(1)}%)`);
                     
-                    // Show migration status to user
-                    this.setStatus('loading', `Migrating ${totalTasksInMd - migrationStatus.taskCount} missing tasks...`);
+                    // Ask for confirmation in console (for debugging)
+                    console.warn('⚠️ Re-migration may cause duplicates. Only proceed if you are sure tasks are missing.');
+                    console.log('To force re-migration, run: app.forceTaskMigration()');
                     
-                    // Force re-migration
-                    const migrationResult = await this.taskParser.migrateToFirestore(this.taskDataService);
-                    
-                    if (migrationResult.success) {
-                        console.log('✅ Re-migration completed successfully!');
-                        console.log(`📊 Total tasks after re-migration: ${migrationResult.migrated} new, ${migrationResult.skipped} skipped`);
-                        
-                        // Save migration timestamp
-                        localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
-                        
-                        this.setStatus('online', 'Task migration completed');
-                    } else {
-                        this.setStatus('offline', 'Migration failed - some features may be limited');
-                    }
+                    // Don't automatically re-migrate to prevent duplicates
+                    localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
+                } else if (taskDifference > 0) {
+                    console.log(`ℹ️ Minor difference detected: ${taskDifference} tasks. This is within acceptable range.`);
+                    localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
                 } else {
                     // Migration is complete and up-to-date, save timestamp
                     localStorage.setItem('lastTaskMigrationTimestamp', new Date().toISOString());
@@ -792,6 +994,8 @@ class SecretaryApp {
             console.error('❌ Error during migration test:', error);
         } finally {
             this.migrationInProgress = false;
+            // Remove migration lock
+            localStorage.removeItem('secretaryai_migration_lock');
         }
     }
 
@@ -1545,7 +1749,7 @@ class SecretaryApp {
             if (result.success && result.duplicatesRemoved > 0) {
                 console.log(`✅ Removed ${result.duplicatesRemoved} duplicate tasks`);
                 // Update the task management view if it's visible
-                if (this.currentView === 'task-management') {
+                if (this.viewMode === 'manage') {
                     await this.loadTasksForManagement();
                     this.updateTaskManagementDisplay();
                 }
@@ -1555,6 +1759,366 @@ class SecretaryApp {
             localStorage.setItem('lastTaskDeduplicationTimestamp', new Date().toISOString());
         } catch (error) {
             console.error('Error during task deduplication:', error);
+        }
+    }
+    
+    /**
+     * Force task migration (manual trigger for debugging)
+     * Use with caution as it may create duplicates
+     */
+    async forceTaskMigration() {
+        console.warn('⚠️ Force migration requested. This may create duplicates!');
+        console.log('Running deduplication first to clean existing tasks...');
+        
+        // First run deduplication
+        await this.manualDeduplication();
+        
+        // Clear migration timestamp to force re-migration
+        localStorage.removeItem('lastTaskMigrationTimestamp');
+        localStorage.removeItem('secretaryai_migration_lock');
+        
+        // Run migration
+        console.log('Starting force migration...');
+        await this.testTaskMigration();
+        
+        // Run deduplication again after migration
+        console.log('Running post-migration deduplication...');
+        await this.manualDeduplication();
+        
+        console.log('✅ Force migration completed');
+    }
+    
+    /**
+     * Manual deduplication (can be called anytime)
+     */
+    async manualDeduplication() {
+        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
+            console.error('TaskDataService not available');
+            return;
+        }
+        
+        try {
+            console.log('🧹 Running manual task deduplication...');
+            const result = await this.taskDataService.deduplicateTasks();
+            
+            if (result.success) {
+                console.log(`✅ Deduplication completed!`);
+                console.log(`📊 Results: ${result.duplicatesRemoved} duplicates removed`);
+                console.log(`📋 Remaining tasks: ${result.remainingTasks}`);
+                
+                // Update UI if in task management view
+                if (this.viewMode === 'manage') {
+                    await this.loadTasksForManagement();
+                    this.updateTaskManagementDisplay();
+                }
+                
+                // Update timestamp
+                localStorage.setItem('lastTaskDeduplicationTimestamp', new Date().toISOString());
+                
+                this.showToast(`Removed ${result.duplicatesRemoved} duplicate tasks`, 'success');
+            } else {
+                console.error('❌ Deduplication failed:', result.error);
+                this.showToast('Deduplication failed', 'error');
+            }
+        } catch (error) {
+            console.error('Error during manual deduplication:', error);
+            this.showToast('Error during deduplication', 'error');
+        }
+    }
+
+    /**
+     * Load schedule for a specific date
+     */
+    async loadScheduleForDate(date) {
+        const endMeasure = window.performanceMonitor.startMeasure('loadScheduleForDate');
+        const dateKey = this.getDateKey(date);
+        
+        // Check cache first
+        if (this.schedulesCache.has(dateKey)) {
+            this.currentSchedule = this.schedulesCache.get(dateKey);
+            this.updateDateDisplay();
+            endMeasure();
+            return;
+        }
+        
+        try {
+            // Try to load from storage
+            const savedSchedule = await window.performanceMonitor.measureAsync('scheduleDataService.load',
+                async () => await this.scheduleDataService.loadSchedule(dateKey)
+            );
+            
+            if (savedSchedule && this.isScheduleValidForDate(savedSchedule, date)) {
+                this.currentSchedule = savedSchedule;
+                this.schedulesCache.set(dateKey, savedSchedule);
+                this.setStatus('online', 'Schedule loaded');
+            } else {
+                // Generate new schedule for this date
+                const newSchedule = await this.generateSchedule(date);
+                this.currentSchedule = newSchedule;
+                this.schedulesCache.set(dateKey, newSchedule);
+            }
+            
+            this.updateDateDisplay();
+            endMeasure();
+        } catch (error) {
+            console.error('Error loading schedule for date:', error);
+            this.showError('Failed to load schedule', error);
+            endMeasure();
+        }
+    }
+
+    /**
+     * Navigate to previous or next date
+     */
+    async navigateDate(direction) {
+        // Show loading state
+        this.showLoading(true);
+        
+        const newDate = new Date(this.currentViewDate);
+        newDate.setDate(newDate.getDate() + direction);
+        
+        this.currentViewDate = newDate;
+        await this.loadScheduleForDate(newDate);
+        this.updateUI();
+        
+        this.showLoading(false);
+    }
+
+    /**
+     * Show date picker (placeholder for future implementation)
+     */
+    showDatePicker() {
+        // For now, just use browser's native date input
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.value = this.getDateKey(this.currentViewDate);
+        
+        input.addEventListener('change', async (e) => {
+            const selectedDate = new Date(e.target.value + 'T00:00:00');
+            this.currentViewDate = selectedDate;
+            await this.loadScheduleForDate(selectedDate);
+            this.updateUI();
+        });
+        
+        // Trigger the date picker
+        input.style.position = 'absolute';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.click();
+        input.remove();
+    }
+
+    /**
+     * Update date display in UI
+     */
+    updateDateDisplay() {
+        const dateKey = this.getDateKey(this.currentViewDate);
+        const today = this.getDateKey(new Date());
+        
+        // Update date display
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateStr = this.currentViewDate.toLocaleDateString('en-US', options);
+        this.elements.currentDateDisplay.textContent = dateStr;
+        
+        // Update title based on date
+        if (dateKey === today) {
+            this.elements.scheduleTitle.textContent = 'Your Schedule for Today';
+        } else if (this.isTomorrow(this.currentViewDate)) {
+            this.elements.scheduleTitle.textContent = 'Your Schedule for Tomorrow';
+        } else if (this.isYesterday(this.currentViewDate)) {
+            this.elements.scheduleTitle.textContent = 'Your Schedule for Yesterday';
+        } else {
+            const dayName = this.currentViewDate.toLocaleDateString('en-US', { weekday: 'long' });
+            this.elements.scheduleTitle.textContent = `Your Schedule for ${dayName}`;
+        }
+        
+        // Update button states
+        // Disable previous button if viewing too far in the past (e.g., 30 days)
+        const minDate = new Date();
+        minDate.setDate(minDate.getDate() - 30);
+        this.elements.prevDateBtn.disabled = this.currentViewDate <= minDate;
+        
+        // Disable next button if viewing too far in the future (e.g., 30 days)
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + 30);
+        this.elements.nextDateBtn.disabled = this.currentViewDate >= maxDate;
+    }
+
+    /**
+     * Get date key in YYYY-MM-DD format
+     */
+    getDateKey(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    /**
+     * Check if schedule is valid for the given date
+     */
+    isScheduleValidForDate(schedule, date) {
+        if (!schedule.generatedAt) return false;
+        
+        // Check if schedule was generated for this specific date
+        if (schedule.targetDate) {
+            const scheduleDate = new Date(schedule.targetDate).toDateString();
+            return scheduleDate === date.toDateString();
+        }
+        
+        // Fallback: check if schedule is recent enough
+        return this.isScheduleRecent(schedule);
+    }
+
+    /**
+     * Check if date is tomorrow
+     */
+    isTomorrow(date) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return date.toDateString() === tomorrow.toDateString();
+    }
+
+    /**
+     * Check if date is yesterday
+     */
+    isYesterday(date) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return date.toDateString() === yesterday.toDateString();
+    }
+    
+    /**
+     * Initialize calendar view component
+     */
+    initializeCalendarView() {
+        if (typeof CalendarView === 'undefined') {
+            console.warn('CalendarView not loaded');
+            return;
+        }
+        
+        this.components.calendarView = new CalendarView({
+            currentDate: this.currentViewDate,
+            onDateSelect: (date) => this.handleCalendarDateSelect(date),
+            onClose: () => this.handleCalendarClose(),
+            onLoadIndicators: (startDate, endDate) => this.loadScheduleIndicators(startDate, endDate)
+        });
+        
+        // Add calendar to the app container
+        const appContainer = document.querySelector('.app');
+        if (appContainer) {
+            appContainer.insertBefore(this.components.calendarView.render(), appContainer.firstChild);
+        }
+    }
+    
+    /**
+     * Initialize insights modal
+     */
+    initializeInsightsModal() {
+        // Create insights modal
+        this.components.insightsModal = new InsightsModal({
+            patternAnalyzer: this.patternAnalyzer
+        });
+        
+        // Initialize the modal
+        this.components.insightsModal.initialize();
+        
+        // Add click handler for insights button
+        const insightsBtn = document.getElementById('insightsBtn');
+        if (insightsBtn) {
+            insightsBtn.addEventListener('click', () => {
+                this.showInsights();
+            });
+        }
+    }
+    
+    /**
+     * Show insights modal
+     */
+    showInsights() {
+        if (!this.components.insightsModal) {
+            console.warn('Insights modal not initialized');
+            return;
+        }
+        
+        this.components.insightsModal.show();
+    }
+    
+    /**
+     * Toggle calendar visibility
+     */
+    toggleCalendar() {
+        if (!this.components.calendarView) {
+            console.warn('Calendar view not initialized');
+            return;
+        }
+        
+        this.components.calendarView.toggle();
+        this.elements.calendarToggleBtn.classList.toggle('active');
+    }
+    
+    /**
+     * Handle calendar date selection
+     */
+    async handleCalendarDateSelect(date) {
+        this.currentViewDate = date;
+        await this.loadScheduleForDate(date);
+        this.updateUI();
+        this.elements.calendarToggleBtn.classList.remove('active');
+    }
+    
+    /**
+     * Handle calendar close
+     */
+    handleCalendarClose() {
+        this.elements.calendarToggleBtn.classList.remove('active');
+    }
+    
+    /**
+     * Load schedule indicators for calendar view
+     */
+    async loadScheduleIndicators(startDate, endDate) {
+        const endMeasure = window.performanceMonitor.startMeasure('loadScheduleIndicators');
+        const indicators = [];
+        
+        try {
+            // Get all dates in range
+            const dates = [];
+            const current = new Date(startDate);
+            while (current <= endDate) {
+                dates.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            
+            // Load schedules for each date (with caching)
+            for (const date of dates) {
+                const dateKey = this.getDateKey(date);
+                let hasSchedule = false;
+                let completionRate = 0;
+                
+                // Check cache first
+                if (this.schedulesCache.has(dateKey)) {
+                    const schedule = this.schedulesCache.get(dateKey);
+                    hasSchedule = !!(schedule && schedule.schedule && schedule.schedule.length > 0);
+                    // TODO: Calculate actual completion rate when task completion tracking is added
+                    completionRate = hasSchedule ? 0.7 : 0; // Mock data for now
+                } else {
+                    // Check if schedule exists in storage
+                    try {
+                        const exists = await this.scheduleDataService.hasSchedule(dateKey);
+                        hasSchedule = exists;
+                        completionRate = hasSchedule ? 0.5 : 0; // Unknown completion rate
+                    } catch (error) {
+                        console.error(`Error checking schedule for ${dateKey}:`, error);
+                    }
+                }
+                
+                indicators.push([dateKey, { hasSchedule, completionRate }]);
+            }
+            
+            endMeasure();
+            return indicators;
+        } catch (error) {
+            console.error('Error loading schedule indicators:', error);
+            endMeasure();
+            return [];
         }
     }
 }
