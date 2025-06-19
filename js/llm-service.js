@@ -174,6 +174,16 @@ class LLMService {
             day: 'numeric'
         });
 
+        // Debug logging
+        console.log('Schedule generation debug:', {
+            targetDate: targetDate.toISOString(),
+            today: today.toISOString(),
+            isFutureDate: targetDate > today,
+            scheduleStartTime: scheduleStartTime.toISOString(),
+            timeStr: timeStr,
+            dateStr: dateStr
+        });
+
         // Use enhanced prompt if context is provided
         const systemPrompt = `You are an intelligent personal assistant that creates practical, chronological daily schedules. You MUST respond with valid JSON only, no other text.`;
         
@@ -183,15 +193,20 @@ class LLMService {
         } else {
             // Standard prompt for backward compatibility
             const taskList = this.formatTaskList(tasks);
-            userPrompt = `Create a chronological daily schedule from the current time until end of day (around 22:00).
+            const startTimeInstruction = targetDate > today 
+                ? `Start the schedule at EXACTLY ${timeStr} (morning time)` 
+                : `Start from the current time (${timeStr})`;
+                
+            userPrompt = `Create a chronological daily schedule from the specified start time until end of day (around 22:00).
 
-Current Date and Time: ${dateStr}, ${timeStr}
+Current Date: ${dateStr}
+Schedule Start Time: ${timeStr}
 
 Available Tasks:
 ${taskList}
 
 Schedule Guidelines:
-1. Start from ${targetDate > today ? 'morning' : 'NOW'} (${timeStr}) and schedule until 22:00
+1. ${startTimeInstruction} and schedule until 22:00
 2. Assign realistic time slots (15-60 minutes per task)
 3. Use logical sequencing (prepare lunch before eating, shower before going out)
 4. Prioritize urgent/high-priority tasks earlier
@@ -212,6 +227,8 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format:
   ],
   "summary": "Brief explanation of the schedule logic"
 }
+
+CRITICAL: The FIRST task in the schedule array MUST start at ${timeStr}
 
 Use these categories: work, personal, routine, urgent, health, social
 Use these priorities: high, medium, low`;
@@ -565,10 +582,12 @@ Use these priorities: high, medium, low`;
      */
     createEnhancedPrompt(tasks, currentTime, dateStr, timeStr, context, targetDate, today) {
         const taskList = this.formatTaskList(tasks);
+        const isFutureDate = targetDate > today;
         
         let prompt = `Create a context-aware daily schedule considering past performance and future commitments.
 
-Current Date and Time: ${dateStr}, ${timeStr}
+Current Date: ${dateStr}
+Schedule Start Time: ${timeStr} ${isFutureDate ? '(This is the morning start time for this future date)' : '(Current time)'}
 
 Available Tasks:
 ${taskList}`;
@@ -632,10 +651,14 @@ Historical Performance:
         }
 
         // Enhanced guidelines
+        const startInstruction = isFutureDate 
+            ? `Start the first task at EXACTLY ${timeStr} - this is the morning start time`
+            : `Start from NOW (${timeStr})`;
+            
         prompt += `
 
 Enhanced Schedule Guidelines:
-1. Start from ${targetDate > today ? 'morning' : 'NOW'} (${timeStr}) and schedule until 22:00
+1. ${startInstruction} and schedule until 22:00
 2. PRIORITIZE rollover tasks from previous days
 3. Consider workload balance - if today is overloaded, identify tasks that could be deferred
 4. Assign realistic time slots based on task complexity (15-90 minutes)
@@ -658,6 +681,8 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format:
   ],
   "summary": "Brief explanation of the schedule logic including rollover handling and workload considerations"
 }
+
+CRITICAL: The FIRST task in the schedule array MUST start at EXACTLY ${timeStr}
 
 Use these categories: work, personal, routine, urgent, health, social
 Use these priorities: high, medium, low
