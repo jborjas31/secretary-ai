@@ -292,6 +292,25 @@ Implemented comprehensive fixes to prevent task duplication issues:
 
 These fixes follow the simplicity principle - preventing duplicates at creation time rather than complex background processes.
 
+### Technical Debt: Property Name Inconsistency
+
+**Issue**: The app uses different property names for task descriptions in different contexts:
+- **TaskParser** (tasks from tasks.md): Uses `text` property
+- **LLMService** (scheduled tasks): Uses `task` property
+
+**Current Workaround**: The rollover task duplicate checking in app.js (lines 300-311) uses a helper function that checks both properties to handle this inconsistency.
+
+**Future Refactoring Recommendation**:
+1. Standardize on a single property name throughout the codebase (suggest using `text` for consistency with existing task data)
+2. Update affected files:
+   - `js/llm-service.js`: Change JSON schema from `task` to `text`
+   - `js/app.js`: Update `renderTaskItem()` and other methods
+   - Any other files that reference task descriptions
+3. Run thorough testing to ensure no breaking changes
+4. This refactoring would improve code consistency and prevent future property-related errors
+
+**Note**: The current workaround is stable and follows the simplicity principle. Refactoring can be done when there's time for comprehensive testing.
+
 ### Phase 3 Remaining Implementation Plan
 
 #### Infrastructure Preparations (COMPLETED ✅)

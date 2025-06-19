@@ -295,14 +295,20 @@ class SecretaryApp {
                 console.log(`Found ${rolloverResult.tasks.length} incomplete tasks from ${rolloverResult.fromDate}`);
                 
                 // Filter out rollover tasks that already exist in relevant tasks
+                // TODO: Standardize property names - TaskParser uses 'text' while LLMService uses 'task'
+                // This is a temporary fix to handle both property names until we can refactor
+                const getTaskDescription = (task) => {
+                    return (task.text || task.task || '').trim().toLowerCase();
+                };
+                
                 const existingTaskTexts = new Set(
-                    relevantTasks.map(task => task.task.trim().toLowerCase())
+                    relevantTasks.map(task => getTaskDescription(task))
                 );
                 
                 const uniqueRolloverTasks = rolloverResult.tasks.filter(rolloverTask => {
-                    const normalizedText = rolloverTask.task.trim().toLowerCase();
+                    const normalizedText = getTaskDescription(rolloverTask);
                     if (existingTaskTexts.has(normalizedText)) {
-                        console.log(`Skipping duplicate rollover task: ${rolloverTask.task}`);
+                        console.log(`Skipping duplicate rollover task: ${rolloverTask.task || rolloverTask.text}`);
                         return false;
                     }
                     return true;
