@@ -142,7 +142,27 @@ class LLMService {
      * @param {Object} context - Optional multi-day context for enhanced scheduling
      */
     async generateDailySchedule(tasks, currentTime = new Date(), context = {}) {
-        const timeStr = currentTime.toLocaleTimeString('en-US', { 
+        // Determine appropriate schedule start time
+        const now = new Date();
+        const targetDate = new Date(currentTime);
+        targetDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let scheduleStartTime;
+        if (targetDate > today) {
+            // For future dates, start from beginning of day (7:00 AM)
+            scheduleStartTime = new Date(targetDate);
+            scheduleStartTime.setHours(7, 0, 0, 0);
+        } else if (targetDate.getTime() === today.getTime()) {
+            // For today, use current time
+            scheduleStartTime = now;
+        } else {
+            // For past dates, use the passed time (shouldn't generate but handle gracefully)
+            scheduleStartTime = currentTime;
+        }
+        
+        const timeStr = scheduleStartTime.toLocaleTimeString('en-US', { 
             hour: '2-digit', 
             minute: '2-digit',
             hour12: false 
@@ -171,7 +191,7 @@ Available Tasks:
 ${taskList}
 
 Schedule Guidelines:
-1. Start from NOW (${timeStr}) and schedule until 22:00
+1. Start from ${targetDate > today ? 'morning' : 'NOW'} (${timeStr}) and schedule until 22:00
 2. Assign realistic time slots (15-60 minutes per task)
 3. Use logical sequencing (prepare lunch before eating, shower before going out)
 4. Prioritize urgent/high-priority tasks earlier
@@ -334,10 +354,26 @@ Use these priorities: high, medium, low`;
      */
     createFallbackSchedule(tasks, currentTime) {
         const schedule = [];
-        const currentHour = currentTime.getHours();
-        const currentMinute = currentTime.getMinutes();
         
-        let scheduleTime = new Date(currentTime);
+        // Determine appropriate schedule start time (same logic as main method)
+        const now = new Date();
+        const targetDate = new Date(currentTime);
+        targetDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let scheduleTime;
+        if (targetDate > today) {
+            // For future dates, start from beginning of day (7:00 AM)
+            scheduleTime = new Date(targetDate);
+            scheduleTime.setHours(7, 0, 0, 0);
+        } else if (targetDate.getTime() === today.getTime()) {
+            // For today, use current time
+            scheduleTime = new Date(now);
+        } else {
+            // For past dates, use the passed time
+            scheduleTime = new Date(currentTime);
+        }
         
         // Round up to next 15-minute interval
         const remainder = scheduleTime.getMinutes() % 15;
@@ -599,7 +635,7 @@ Historical Performance:
         prompt += `
 
 Enhanced Schedule Guidelines:
-1. Start from NOW (${timeStr}) and schedule until 22:00
+1. Start from ${targetDate > today ? 'morning' : 'NOW'} (${timeStr}) and schedule until 22:00
 2. PRIORITIZE rollover tasks from previous days
 3. Consider workload balance - if today is overloaded, identify tasks that could be deferred
 4. Assign realistic time slots based on task complexity (15-90 minutes)
