@@ -246,8 +246,9 @@ export class ScheduleManager extends BaseManager {
             return scheduleDate === date.toDateString();
         }
         
-        // Fallback: check if schedule is recent enough
-        return this.isScheduleRecent(schedule);
+        // If there is no targetDate, the schedule is not considered valid for any specific date.
+        console.warn("isScheduleValidForDate called on a schedule without a 'targetDate'. Treating as invalid.");
+        return false;
     }
     
     /**
