@@ -29,6 +29,10 @@ class AppController extends ComponentWithListeners {
         this.taskDataService = new TaskDataService();
         this.scheduleDataService = new ScheduleDataService();
         
+        // Task management services (must be created before managers)
+        this.taskIndexManager = new TaskIndexManager();
+        this.filterCache = new FilterCache();
+        
         // Lazy loaded services
         this.patternAnalyzer = null; // Loaded when insights are accessed
         

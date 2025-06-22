@@ -34,6 +34,7 @@ async function initializeApp() {
             { path: './task-data-service.js', export: 'TaskDataService', name: 'TaskDataService' },
             { path: './schedule-data-service.js', export: 'ScheduleDataService', name: 'ScheduleDataService' },
             { path: './task-index-manager.js', export: 'TaskIndexManager', name: 'TaskIndexManager' },
+            { path: './filter-cache.js', export: 'FilterCache', name: 'FilterCache' },
             { path: './app-state.js', export: 'AppState', name: 'AppState' },
             { path: './base-manager.js', export: 'BaseManager', name: 'BaseManager' },
             { path: './managers/settings-manager.js', export: 'SettingsManager', name: 'SettingsManager' },

@@ -1,45 +1,6 @@
 import { BaseManager } from '../base-manager.js';
 
 /**
- * Filter Cache for optimized filtering
- */
-class FilterCache {
-    constructor() {
-        this.lastFilters = null;
-        this.lastSearchQuery = null;
-        this.lastResult = null;
-        this.isDirty = true;
-    }
-    
-    /**
-     * Check if filters have changed
-     */
-    hasFiltersChanged(filters, searchQuery) {
-        if (this.isDirty) return true;
-        
-        return this.lastSearchQuery !== searchQuery ||
-               JSON.stringify(this.lastFilters) !== JSON.stringify(filters);
-    }
-    
-    /**
-     * Update cache
-     */
-    updateCache(filters, searchQuery, result) {
-        this.lastFilters = { ...filters };
-        this.lastSearchQuery = searchQuery;
-        this.lastResult = result;
-        this.isDirty = false;
-    }
-    
-    /**
-     * Invalidate cache
-     */
-    invalidate() {
-        this.isDirty = true;
-    }
-}
-
-/**
  * TaskManager
  * Handles all task CRUD operations, filtering, searching, and task management UI
  */
@@ -68,10 +29,6 @@ export class TaskManager extends BaseManager {
             loading: false,
             sectionPagination: {} // Track pagination per section
         };
-        
-        // Task indexing and filtering optimization
-        this.taskIndexManager = new TaskIndexManager();
-        this.filterCache = new FilterCache();
     }
     
     /**
