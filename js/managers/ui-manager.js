@@ -42,6 +42,7 @@ export class UIManager extends BaseManager {
             // Task management elements
             taskSectionsContainer: document.getElementById('taskSectionsContainer'),
             taskSearchContainer: document.getElementById('searchBarContainer'),
+            taskManagementEmpty: document.getElementById('taskManagementEmpty'),
             
             // Navigation
             prevDateBtn: document.getElementById('prevDateBtn'),

@@ -271,7 +271,7 @@ export class ScheduleManager extends BaseManager {
             this.app.elements.emptyState.style.display = 'block';
             // Use DOM diff to clear efficiently
             if (window.domDiff) {
-                window.domDiff.updateContainer(this.app.elements.taskList, [], () => null, () => '');
+                window.domDiff.updateContainer(this.app.elements.scheduleList, [], () => null, () => '');
             }
             return;
         }
@@ -281,7 +281,7 @@ export class ScheduleManager extends BaseManager {
         if (schedule.length === 0) {
             this.app.elements.emptyState.style.display = 'block';
             if (window.domDiff) {
-                window.domDiff.updateContainer(this.app.elements.taskList, [], () => null, () => '');
+                window.domDiff.updateContainer(this.app.elements.scheduleList, [], () => null, () => '');
             }
             return;
         }
@@ -312,7 +312,7 @@ export class ScheduleManager extends BaseManager {
         // Use DOM diff for efficient updates
         if (window.domDiff) {
             window.domDiff.updateContainer(
-                this.app.elements.taskList,
+                this.app.elements.scheduleList,
                 schedule,
                 (task) => this.createTaskElement(task),
                 (task) => task.text || ''
@@ -387,7 +387,7 @@ export class ScheduleManager extends BaseManager {
             checkbox.type = 'checkbox';
             checkbox.className = 'task-checkbox';
             checkbox.checked = task.completed || false;
-            checkbox.addEventListener('change', (e) => {
+            this.app.addEventListener(checkbox, 'change', (e) => {
                 this.handleTaskCompletion(task, e.target.checked);
             });
             li.insertBefore(checkbox, li.firstChild);
