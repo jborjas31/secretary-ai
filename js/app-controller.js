@@ -146,53 +146,55 @@ class AppController extends ComponentWithListeners {
      * Set up event listeners for manager communication
      */
     setupManagerEventListeners() {
+        const eventBus = window.globalEventManager;
+
         // Listen for settings updates
-        this.settingsManager.on('settings-updated', (settings) => {
+        eventBus.on('settings-updated', (settings) => {
             this.uiManager.updateStatus();
         });
-        
-        this.settingsManager.on('request-schedule-refresh', () => {
+
+        eventBus.on('request-schedule-refresh', () => {
             this.scheduleManager.refreshSchedule();
         });
-        
+
         // Listen for date navigation events
-        this.dateNavigationManager.on('date-changed', async ({ date, previousDate }) => {
+        eventBus.on('date-changed', async ({ date, previousDate }) => {
             await this.scheduleManager.loadScheduleForDate(date);
             this.uiManager.updateUI();
         });
-        
-        this.dateNavigationManager.on('request-schedule-load', async ({ date, dateKey }) => {
+
+        eventBus.on('request-schedule-load', async ({ date, dateKey }) => {
             await this.scheduleManager.loadScheduleForDate(date);
         });
-        
+
         // Listen for UI manager events
-        this.uiManager.on('request-schedule-display-update', () => {
+        eventBus.on('request-schedule-display-update', () => {
             this.scheduleManager.updateScheduleDisplay();
         });
-        
-        // Listen for schedule manager events
-        this.scheduleManager.on('schedule-generated', ({ schedule, date }) => {
-            this.uiManager.updateUI();
-        });
-        
-        this.scheduleManager.on('schedule-display-updated', ({ schedule }) => {
-            // Any additional UI updates if needed
-        });
-        
-        this.scheduleManager.on('schedule-task-completed', ({ task, completed }) => {
-            // Handle task completion if needed
-        });
-        
-        this.uiManager.on('request-task-display-update', () => {
+
+        eventBus.on('request-task-display-update', () => {
             this.taskManager.updateTaskManagementDisplay();
         });
         
-        this.uiManager.on('request-date-display-update', () => {
+        eventBus.on('request-date-display-update', () => {
             this.dateNavigationManager.updateDateDisplay();
         });
-        
-        this.uiManager.on('request-load-more-tasks', () => {
+
+        eventBus.on('request-load-more-tasks', () => {
             this.taskManager.loadMoreTasks();
+        });
+
+        // Listen for schedule manager events
+        eventBus.on('schedule-generated', ({ schedule, date }) => {
+            this.uiManager.updateUI();
+        });
+
+        eventBus.on('schedule-display-updated', ({ schedule }) => {
+            // Any additional UI updates if needed
+        });
+
+        eventBus.on('schedule-task-completed', ({ task, completed }) => {
+            // Handle task completion if needed
         });
     }
 
