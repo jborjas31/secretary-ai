@@ -240,21 +240,15 @@ export class ScheduleManager extends BaseManager {
         if (!schedule?.generatedAt) return false;
         if (!schedule?.schedule || schedule.schedule.length === 0) return false;
 
-        // Check if schedule was generated for this specific date
-        if (schedule.date) {
-            const scheduleDate = new Date(schedule.date).toDateString();
-            return scheduleDate === date.toDateString();
-        }
-
-        // Fallback for older schedule formats that might use targetDate
-        if (schedule.targetDate) {
-            const scheduleDate = new Date(schedule.targetDate).toDateString();
-            return scheduleDate === date.toDateString();
+        const scheduleDateKey = schedule.date || (schedule.targetDate ? schedule.targetDate.split('T')[0] : null);
+        if (!scheduleDateKey) {
+            console.warn("Schedule object is missing a valid 'date' or 'targetDate' property.");
+            return false;
         }
         
-        // If neither date property exists, it's invalid.
-        console.warn("isScheduleValidForDate called on a schedule without a 'date' or 'targetDate' property. Treating as invalid.");
-        return false;
+        // This correctly compares dates in 'YYYY-MM-DD' format, avoiding timezone issues.
+        const targetDateKey = this.app.dateNavigationManager.getDateKey(date);
+        return scheduleDateKey === targetDateKey;
     }
     
     /**
