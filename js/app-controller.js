@@ -284,6 +284,9 @@ class AppController extends ComponentWithListeners {
         
         // Calendar toggle button
         this.addEventListener(this.elements.calendarToggleBtn, 'click', () => this.toggleCalendar());
+        
+        // Insights button
+        this.addEventListener(this.elements.insightsBtn, 'click', () => this.showInsights());
 
         // Date navigation
         this.addEventListener(this.elements.prevDateBtn, 'click', () => this.dateNavigationManager.navigateDate(-1));

@@ -29,7 +29,7 @@ export class DateNavigationManager extends BaseManager {
         // Navigation buttons
         this.app.addEventListener(this.elements.prevDateBtn, 'click', () => this.navigateDate(-1));
         this.app.addEventListener(this.elements.nextDateBtn, 'click', () => this.navigateDate(1));
-        this.app.addEventListener(this.elements.todayBtn, 'click', () => this.navigateToToday());
+        // this.app.addEventListener(this.elements.todayBtn, 'click', () => this.navigateToToday()); // This button does not exist in the HTML
         
         // Date picker
         this.app.addEventListener(this.elements.datePickerBtn, 'click', () => this.showDatePicker());
