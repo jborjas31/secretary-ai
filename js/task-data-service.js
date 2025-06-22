@@ -88,14 +88,12 @@ class TaskDataService {
             const existingTasks = await this.getAllTasks();
             const normalizedNewText = taskData.text.trim().toLowerCase();
             
-            // Check for exact or very similar duplicates
+            // Check for exact duplicates
             const duplicate = existingTasks.find(task => {
                 const normalizedExistingText = task.text.trim().toLowerCase();
-                // Check for exact match or if one contains the other (allowing minor variations)
-                return normalizedExistingText === normalizedNewText ||
-                       (task.section === taskData.section && 
-                        (normalizedExistingText.includes(normalizedNewText) || 
-                         normalizedNewText.includes(normalizedExistingText)));
+                // Check for an exact match in the same section
+                return task.section === taskData.section && 
+                       normalizedExistingText === normalizedNewText;
             });
             
             if (duplicate) {
