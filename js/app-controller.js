@@ -407,6 +407,19 @@ class AppController extends ComponentWithListeners {
         if (!this.components.insightsModal) {
             console.log('Loading Insights Modal...');
             await this.ensurePatternAnalyzer(); // Ensure pattern analyzer is loaded first
+            
+            const InsightsModal = await window.loadInsightsModal();
+            this.components.insightsModal = new InsightsModal({
+                patternAnalyzer: this.patternAnalyzer
+            });
+            this.components.insightsModal.initialize();
+        }
+    }
+    
+    /**
+     * Toggle between schedule and task management views
+     */
+    toggleViewMode = () => {
         const currentView = this.appState.get('currentView');
         const newView = currentView === 'schedule' ? 'tasks' : 'schedule';
         
@@ -432,6 +445,15 @@ class AppController extends ComponentWithListeners {
         }
         
         this.uiManager.updateUI();
+    }
+    
+    /**
+     * Clean up API keys from Firestore for security
+     */
+    async cleanupApiKeysFromFirestore() {
+        try {
+            const cloudSettings = await this.firestoreService.loadSettings();
+            if (cloudSettings && cloudSettings.openrouterApiKey) {
                 const { openrouterApiKey, ...cleanSettings } = cloudSettings;
                 
                 // Save back without API key
