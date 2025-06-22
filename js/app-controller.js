@@ -94,6 +94,9 @@ class AppController extends ComponentWithListeners {
             await this.uiManager.initialize();
             this.elements = this.uiManager.elements; // Maintain backward compatibility
             
+            // Initialize SettingsManager after UI elements are ready
+            await this.settingsManager.initialize();
+            
             // Load settings through SettingsManager
             await this.settingsManager.loadSettings();
             

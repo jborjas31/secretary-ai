@@ -15,8 +15,13 @@ export class SettingsManager extends BaseManager {
             notifications: true,
             theme: 'light'
         };
-        
-        // Initialize event listeners
+    }
+    
+    /**
+     * Initialize the settings manager
+     */
+    async initialize() {
+        // Initialize event listeners after UI elements are ready
         this.initializeEventListeners();
     }
     
