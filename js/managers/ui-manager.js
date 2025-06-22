@@ -36,6 +36,7 @@ export class UIManager extends BaseManager {
             scheduleContainer: document.getElementById('scheduleView'),
             scheduleTitle: document.getElementById('scheduleTitle'),
             scheduleList: document.getElementById('taskList'),
+            emptyState: document.getElementById('emptyState'),
             currentDateDisplay: document.getElementById('currentDateDisplay'),
             
             // Task management elements
