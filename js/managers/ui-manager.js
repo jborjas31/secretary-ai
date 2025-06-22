@@ -83,9 +83,6 @@ export class UIManager extends BaseManager {
             // Buttons that might not exist yet
             loadMoreButton: null
         };
-        
-        // Pass elements reference to app for backward compatibility
-        this.app.elements = elements;
     }
     
     /**
