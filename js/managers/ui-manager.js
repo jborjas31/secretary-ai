@@ -54,6 +54,7 @@ export class UIManager extends BaseManager {
             generateBtn: null, // Not in HTML
             settingsBtn: document.getElementById('settingsBtn'),
             insightsBtn: document.getElementById('insightsBtn'),
+            viewToggleBtn: document.getElementById('viewToggleBtn'),
             
             // Status and info
             status: document.getElementById('status'),
