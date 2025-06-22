@@ -29,52 +29,52 @@ export class UIManager extends BaseManager {
         // Main containers
         this.app.elements = {
             // Main views
-            scheduleView: document.getElementById('schedule-view'),
-            taskView: document.getElementById('task-view'),
+            scheduleView: document.getElementById('scheduleView'),
+            taskView: document.getElementById('taskManagementView'),
             
             // Schedule elements
-            scheduleContainer: document.getElementById('schedule-container'),
-            scheduleTitle: document.getElementById('schedule-title'),
-            scheduleList: document.getElementById('schedule-list'),
-            currentDateDisplay: document.getElementById('current-date-display'),
+            scheduleContainer: document.getElementById('scheduleView'),
+            scheduleTitle: document.getElementById('scheduleTitle'),
+            scheduleList: document.getElementById('taskList'),
+            currentDateDisplay: document.getElementById('currentDateDisplay'),
             
             // Task management elements
-            taskSectionsContainer: document.getElementById('task-sections-container'),
-            taskSearchContainer: document.getElementById('task-search-container'),
+            taskSectionsContainer: document.getElementById('taskSectionsContainer'),
+            taskSearchContainer: document.getElementById('searchBarContainer'),
             
             // Navigation
-            prevDateBtn: document.getElementById('prev-date'),
-            nextDateBtn: document.getElementById('next-date'),
-            todayBtn: document.getElementById('today-btn'),
-            datePickerBtn: document.getElementById('date-picker-btn'),
-            calendarToggleBtn: document.getElementById('calendar-toggle-btn'),
+            prevDateBtn: document.getElementById('prevDateBtn'),
+            nextDateBtn: document.getElementById('nextDateBtn'),
+            todayBtn: null, // Not in HTML
+            datePickerBtn: document.getElementById('datePickerBtn'),
+            calendarToggleBtn: document.getElementById('calendarToggleBtn'),
             
             // Actions
-            refreshBtn: document.getElementById('refresh-btn'),
-            generateBtn: document.getElementById('generate-btn'),
-            settingsBtn: document.getElementById('settings-btn'),
-            insightsBtn: document.getElementById('insights-btn'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            generateBtn: null, // Not in HTML
+            settingsBtn: document.getElementById('settingsBtn'),
+            insightsBtn: document.getElementById('insightsBtn'),
             
             // Status and info
             status: document.getElementById('status'),
-            statusText: document.querySelector('#status .status-text'),
-            currentTime: document.getElementById('current-time'),
-            lastUpdated: document.getElementById('last-updated'),
-            modelBadge: document.getElementById('model-badge'),
-            modelName: document.getElementById('model-name'),
+            statusText: document.getElementById('statusText'),
+            currentTime: document.getElementById('currentTime'),
+            lastUpdated: document.getElementById('lastUpdated'),
+            modelBadge: document.getElementById('modelBadge'),
+            modelName: document.getElementById('modelName'),
             
             // Loading
-            loadingOverlay: document.getElementById('loading-overlay'),
-            loadingMessage: document.querySelector('#loading-overlay .loading-message'),
+            loadingOverlay: document.getElementById('loadingOverlay'),
+            loadingMessage: document.querySelector('#loadingOverlay .loading-text'),
             
             // Settings modal
-            settingsModal: document.getElementById('settings-modal'),
-            modalClose: document.querySelector('.modal-close'),
-            openrouterKey: document.getElementById('openrouter-key'),
-            modelSelect: document.getElementById('model-select'),
-            refreshInterval: document.getElementById('refresh-interval'),
-            saveSettings: document.getElementById('save-settings'),
-            toggleApiKeyVisibility: document.getElementById('toggle-api-key-visibility'),
+            settingsModal: document.getElementById('settingsModal'),
+            modalClose: document.getElementById('modalClose'),
+            openrouterKey: document.getElementById('openrouterKey'),
+            modelSelect: document.getElementById('modelSelect'),
+            refreshInterval: document.getElementById('refreshInterval'),
+            saveSettings: document.getElementById('saveSettings'),
+            toggleApiKeyVisibility: document.getElementById('toggleApiKeyVisibility'),
             
             // View toggles
             scheduleTab: document.querySelector('[data-view="schedule"]'),
