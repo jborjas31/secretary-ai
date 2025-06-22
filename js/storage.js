@@ -676,49 +676,6 @@ class StorageService {
         }
     }
 
-    /**
-     * Migration helper - check and perform task migration
-     */
-    async performTaskMigration(taskParser) {
-        if (!this.taskDataService || !this.taskDataService.isAvailable()) {
-            console.log('Task migration skipped - TaskDataService not available');
-            return { migrated: false, reason: 'TaskDataService not available' };
-        }
-
-        try {
-            // Check if migration is needed
-            const migrationStatus = await taskParser.checkMigrationStatus(this.taskDataService);
-            
-            if (!migrationStatus.migrated) {
-                console.log('Starting task migration...');
-                const migrationResult = await taskParser.migrateToFirestore(this.taskDataService);
-                
-                if (migrationResult.success) {
-                    // Save migration status
-                    this.setLocal('migration-status', {
-                        completed: true,
-                        timestamp: new Date().toISOString(),
-                        tasksMigrated: migrationResult.migrated
-                    });
-                }
-                
-                return migrationResult;
-            } else {
-                console.log(`Migration already completed - ${migrationStatus.taskCount} tasks in Firestore`);
-                return { 
-                    migrated: true, 
-                    taskCount: migrationStatus.taskCount,
-                    alreadyCompleted: true 
-                };
-            }
-        } catch (error) {
-            console.error('Error during task migration:', error);
-            return { 
-                migrated: false, 
-                error: error.message 
-            };
-        }
-    }
 
     /**
      * Export enhanced backup data

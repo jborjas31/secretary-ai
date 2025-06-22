@@ -408,7 +408,7 @@ Use these priorities: high, medium, low`;
 
             schedule.push({
                 time: timeStr,
-                task: task.content.split('\n')[0], // Just the main task, not sub-tasks
+                text: task.content.split('\n')[0], // Just the main task, not sub-tasks
                 duration: task.section === 'dailyTasks' ? '15-30 minutes' : '30-45 minutes',
                 priority: task.priority,
                 category: this.categorizeTask(task.section)

@@ -451,27 +451,22 @@ export class ScheduleManager extends BaseManager {
      * Get tasks for schedule generation
      */
     async getTasksForSchedule() {
-        // Try to get tasks from TaskDataService first
+        // Only use TaskDataService for tasks
         if (this.taskDataService.isAvailable()) {
             try {
+                console.log('Fetching tasks exclusively from TaskDataService...');
                 const result = await this.taskDataService.getAllTasks();
-                return result.tasks || [];
+                return result || [];
             } catch (error) {
-                console.error('Error loading tasks from TaskDataService:', error);
+                console.error('Critical Error: Could not load tasks from TaskDataService. Schedule generation will fail.', error);
+                // On failure, return an empty array to prevent crashing
+                return [];
             }
         }
         
-        // Fallback to TaskParser
-        const parsedTasks = await this.app.taskParser.getCachedTasks();
-        const tasks = [];
-        
-        Object.entries(parsedTasks || {}).forEach(([section, sectionTasks]) => {
-            if (Array.isArray(sectionTasks)) {
-                tasks.push(...sectionTasks);
-            }
-        });
-        
-        return tasks;
+        // If TaskDataService is not available, log a warning and return empty
+        console.warn('TaskDataService is not available. Cannot fetch tasks for schedule generation.');
+        return [];
     }
     
     /**

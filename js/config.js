@@ -166,63 +166,63 @@ const MOCK_DATA = {
         schedule: [
             {
                 time: "14:30",
-                task: "Pick up package from Correos",
+                text: "Pick up package from Correos",
                 duration: "30 minutes",
                 priority: "high",
                 category: "urgent"
             },
             {
                 time: "15:30",
-                task: "Refill prepaid Movistar data sim card",
+                text: "Refill prepaid Movistar data sim card",
                 duration: "45 minutes",
                 priority: "high",
                 category: "urgent"
             },
             {
                 time: "16:30",
-                task: "Prepare work lunch for tomorrow",
+                text: "Prepare work lunch for tomorrow",
                 duration: "30 minutes",
                 priority: "medium",
                 category: "routine"
             },
             {
                 time: "17:00",
-                task: "Check and respond to emails",
+                text: "Check and respond to emails",
                 duration: "15 minutes",
                 priority: "medium",
                 category: "work"
             },
             {
                 time: "17:30",
-                task: "Take medicines and supplements (2g Lysine)",
+                text: "Take medicines and supplements (2g Lysine)",
                 duration: "10 minutes",
                 priority: "high",
                 category: "health"
             },
             {
                 time: "18:00",
-                task: "Journal - Log today's activities",
+                text: "Journal - Log today's activities",
                 duration: "20 minutes",
                 priority: "medium",
                 category: "personal"
             },
             {
                 time: "19:00",
-                task: "Plan tomorrow's activities and priorities",
+                text: "Plan tomorrow's activities and priorities",
                 duration: "30 minutes",
                 priority: "medium",
                 category: "personal"
             },
             {
                 time: "21:00",
-                task: "Apply topical minoxidil on scalp",
+                text: "Apply topical minoxidil on scalp",
                 duration: "5 minutes",
                 priority: "medium",
                 category: "health"
             },
             {
                 time: "21:30",
-                task: "Brush teeth and use nasal strips before sleep",
+                text: "Brush teeth and use nasal strips before sleep",
                 duration: "10 minutes",
                 priority: "high",
                 category: "health"

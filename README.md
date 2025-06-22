@@ -4,7 +4,7 @@ An AI-powered Progressive Web App that transforms your task list into intelligen
 
 ## Overview
 
-Secretary AI reads your `tasks.md` file and generates smart, time-aware schedules using advanced AI models. It features offline-first design, cross-device sync, a complete task management interface, calendar navigation, and productivity insights.
+Secretary AI generates smart, time-aware schedules using advanced AI models. It features offline-first design, cross-device sync, a complete task management interface, calendar navigation, and productivity insights. All tasks are managed directly through the web interface.
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ Secretary AI reads your `tasks.md` file and generates smart, time-aware schedule
    - Default model is deepseek-r1 (or use the free tier!)
 
 3. **Start using**
-   - Create or update your `tasks.md` file
+   - Click the + button to create your first task
    - AI generates your personalized daily schedule
    - Switch to Task Management mode for full editing capabilities
 
@@ -43,7 +43,6 @@ Secretary AI reads your `tasks.md` file and generates smart, time-aware schedule
 ```
 secretary_ai/
 ├── index.html              # Main application
-├── tasks.md               # Your task data
 ├── manifest.json          # PWA configuration
 ├── sw.js                  # Service worker
 ├── css/                   # Styling
@@ -102,7 +101,6 @@ const FIREBASE_CONFIG = {
 
 ## Common Issues
 
-- **"Failed to load tasks.md"**: Ensure file exists and serve via HTTP
 - **"Invalid API key"**: Check your OpenRouter API key in Settings
 - **"API credits exhausted"**: Add credits or switch to free model
 - **"You're offline"**: Connect to internet for new schedules (cached schedules still work)

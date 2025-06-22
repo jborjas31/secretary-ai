@@ -33,7 +33,6 @@ keep_files:
   - css/
   - js/
   - index.html
-  - tasks.md
 
 # Defaults
 defaults:

@@ -94,10 +94,10 @@ users/default-user/
 - Feature flags for debugging
 
 **Module Loading Order** (from app-init.js):
-validation-utils → event-registry → task-parser → llm-service → firestore → task-data-service → schedule-data-service → task-index-manager → app-state → base-manager → managers (settings, date-navigation, ui, schedule, task) → app-controller → (secondary modules loaded later: ui-components, pattern-analyzer)
+validation-utils → event-registry → llm-service → firestore → task-data-service → schedule-data-service → task-index-manager → app-state → base-manager → managers (settings, date-navigation, ui, schedule, task) → app-controller → (secondary modules loaded later: ui-components, pattern-analyzer)
 
 **Critical Dependencies**:
-- `tasks.md` must exist in root for fallback parsing
+- All tasks managed exclusively through web UI (Firestore)
 - Service worker (`sw.js`) enables offline functionality
 - No build process - direct static file serving
 

@@ -56,7 +56,6 @@
                 hostname: window.location.hostname,
                 pathname: window.location.pathname,
                 baseUrl: window.Config ? window.Config.getBaseUrl() : 'Config not loaded',
-                tasksUrl: window.Config ? window.Config.getResourceUrl('tasks.md') : 'Config not loaded',
                 isDevelopment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
                 isGitHubPages: window.location.hostname.includes('github.io'),
                 environment: 'Will be detected after config loads'
@@ -67,7 +66,6 @@
 Hostname: ${info.hostname}
 Pathname: ${info.pathname}  
 Base URL: ${info.baseUrl}
-Tasks URL: ${info.tasksUrl}
 Is Development: ${info.isDevelopment}
 Is GitHub Pages: ${info.isGitHubPages}`;
         }

@@ -19,7 +19,6 @@ const STATIC_ASSETS = [
     // Primary modules (cached for offline use)
     './js/app.js',
     './js/validation-utils.js',
-    './js/task-parser.js',
     './js/llm-service.js',
     './js/firestore.js',
     './js/task-data-service.js',
@@ -30,7 +29,6 @@ const STATIC_ASSETS = [
     './js/pattern-analyzer.js',
     './js/insights-modal.js',
     './js/calendar-view.js',
-    './tasks.md'
 ];
 
 // Install event - cache static assets
@@ -95,28 +93,6 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Special handling for tasks.md - network first with cache fallback
-    if (event.request.url.endsWith('tasks.md')) {
-        event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    // If successful, cache the new version
-                    if (response.status === 200) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseClone);
-                            });
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    // If network fails, try cache
-                    return caches.match(event.request);
-                })
-        );
-        return;
-    }
 
     // Cache first strategy for static assets
     event.respondWith(

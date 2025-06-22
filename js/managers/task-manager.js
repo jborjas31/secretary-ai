@@ -105,13 +105,10 @@ export class TaskManager extends BaseManager {
             if (this.taskDataService.isAvailable()) {
                 newTask = await this.taskDataService.createTask(taskData);
             } else {
-                // Fallback: add to current tasks and save via TaskParser
-                newTask = {
-                    id: this.generateTaskId(),
-                    ...taskData,
-                    createdAt: new Date().toISOString()
-                };
-                this.currentTasks.push(newTask);
+                // Cannot create tasks without TaskDataService
+                console.error('Cannot create tasks - TaskDataService not available');
+                this.app.uiManager.showToast('Cannot create tasks - database not connected', 'error');
+                return null;
             }
 
             // Add to indexes
@@ -287,23 +284,10 @@ export class TaskManager extends BaseManager {
                 // Load from TaskDataService with pagination
                 await this.loadMoreTasks();
             } else {
-                // Fallback to TaskParser (loads all at once)
-                console.log('📄 Falling back to TaskParser...');
-                const parsedTasks = await this.app.taskParser.getCachedTasks();
-                console.log('📋 Parsed task sections:', Object.keys(parsedTasks || {}));
-                console.log('📋 Section contents:', parsedTasks);
-                
-                this.currentTasks = this.flattenTaskSections(parsedTasks);
-                console.log('📝 Flattened tasks:', this.currentTasks.length, 'total tasks');
-                
-                // Log tasks by section for debugging
-                const tasksBySection = this.groupTasksBySection(this.currentTasks);
-                console.log('📂 Tasks grouped by section:', Object.keys(tasksBySection));
-                Object.entries(tasksBySection).forEach(([section, tasks]) => {
-                    console.log(`  ${section}: ${tasks.length} tasks`);
-                });
-                
-                this.taskPagination.hasMore = false; // No pagination with TaskParser
+                // TaskDataService not available
+                console.log('⚠️ TaskDataService not available');
+                this.currentTasks = [];
+                this.taskPagination.hasMore = false;
             }
             
             // Build indexes after loading tasks

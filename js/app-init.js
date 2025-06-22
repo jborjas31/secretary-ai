@@ -28,7 +28,6 @@ async function initializeApp() {
             { path: './validation-utils.js', export: 'ValidationUtils', name: 'ValidationUtils' },
             { path: './event-registry.js', export: 'EventListenerRegistry', name: 'EventListenerRegistry' },
             { path: './event-registry.js', export: 'ComponentWithListeners', name: 'ComponentWithListeners' },
-            { path: './task-parser.js', export: 'TaskParser', name: 'TaskParser' },
             { path: './llm-service.js', export: 'LLMService', name: 'LLMService' },
             { path: './firestore.js', export: 'FirestoreService', name: 'FirestoreService' },
             { path: './task-data-service.js', export: 'TaskDataService', name: 'TaskDataService' },
