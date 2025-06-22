@@ -27,8 +27,8 @@ export class BaseManager {
      * Emit an event to other managers
      */
     emit(eventName, data) {
-        if (this.app && this.app.emit) {
-            this.app.emit(eventName, data);
+        if (window.globalEventManager) {
+            window.globalEventManager.emit(eventName, data);
         }
     }
     
@@ -36,10 +36,10 @@ export class BaseManager {
      * Listen for events from other managers
      */
     on(eventName, callback) {
-        if (this.app && this.app.on) {
+        if (window.globalEventManager) {
             const wrappedCallback = (data) => callback.call(this, data);
             this.listeners.set(callback, wrappedCallback);
-            this.app.on(eventName, wrappedCallback);
+            window.globalEventManager.on(eventName, wrappedCallback);
         }
     }
     
@@ -47,10 +47,10 @@ export class BaseManager {
      * Remove event listener
      */
     off(eventName, callback) {
-        if (this.app && this.app.off) {
+        if (window.globalEventManager) {
             const wrappedCallback = this.listeners.get(callback);
             if (wrappedCallback) {
-                this.app.off(eventName, wrappedCallback);
+                window.globalEventManager.off(eventName, wrappedCallback);
                 this.listeners.delete(callback);
             }
         }
