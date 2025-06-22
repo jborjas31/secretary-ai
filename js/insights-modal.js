@@ -348,3 +348,6 @@ class InsightsModal extends UIComponent {
 
 // Export for use in other modules
 window.InsightsModal = InsightsModal;
+
+// ES6 export for module loader
+export { InsightsModal };

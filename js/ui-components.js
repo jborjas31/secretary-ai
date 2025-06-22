@@ -491,3 +491,6 @@ window.UIComponents = {
     SearchBarComponent,
     FloatingActionButton
 };
+
+// ES6 export for module loader
+export { UIComponent, UIComponents };

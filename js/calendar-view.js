@@ -262,3 +262,6 @@ window.CalendarView = CalendarView;
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CalendarView;
 }
+
+// ES6 export for module loader
+export { CalendarView };
