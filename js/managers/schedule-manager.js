@@ -239,15 +239,21 @@ export class ScheduleManager extends BaseManager {
     isScheduleValidForDate(schedule, date) {
         if (!schedule?.generatedAt) return false;
         if (!schedule?.schedule || schedule.schedule.length === 0) return false;
-        
+
         // Check if schedule was generated for this specific date
+        if (schedule.date) {
+            const scheduleDate = new Date(schedule.date).toDateString();
+            return scheduleDate === date.toDateString();
+        }
+
+        // Fallback for older schedule formats that might use targetDate
         if (schedule.targetDate) {
             const scheduleDate = new Date(schedule.targetDate).toDateString();
             return scheduleDate === date.toDateString();
         }
         
-        // If there is no targetDate, the schedule is not considered valid for any specific date.
-        console.warn("isScheduleValidForDate called on a schedule without a 'targetDate'. Treating as invalid.");
+        // If neither date property exists, it's invalid.
+        console.warn("isScheduleValidForDate called on a schedule without a 'date' or 'targetDate' property. Treating as invalid.");
         return false;
     }
     
