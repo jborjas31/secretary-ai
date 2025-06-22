@@ -192,7 +192,9 @@ export class DateNavigationManager extends BaseManager {
         
         // Update today button
         const isToday = this.getDateKey(currentDate) === this.getDateKey(new Date());
-        this.elements.todayBtn.disabled = isToday;
+        if (this.elements.todayBtn) {
+            this.elements.todayBtn.disabled = isToday;
+        }
     }
     
     /**
