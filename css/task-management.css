@@ -452,6 +452,51 @@
     color: #495057;
 }
 
+/* Search loading states */
+.search-bar-component {
+    position: relative;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-spinner {
+    position: absolute;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ddd;
+    border-top-color: #2196F3;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+/* Show spinner when searching */
+.search-bar-component.searching .search-spinner,
+.search-bar-component.typing .search-spinner {
+    opacity: 1;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Subtle pulse effect while typing */
+.search-bar-component.typing .search-input {
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Loading state for input */
+.search-input.loading {
+    padding-right: 35px; /* Make room for spinner */
+}
+
 /* ==============================================
    Floating Action Button
    ============================================== */
@@ -739,5 +784,64 @@
     
     .section-content.expanded::-webkit-scrollbar-thumb:hover {
         background: #67809a;
+    }
+}
+
+/* ==============================================
+   Load More Button
+   ============================================== */
+
+.load-more-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 300px;
+    margin: 2rem auto;
+    padding: 0.75rem 1.5rem;
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #495057;
+    transition: all 0.3s ease;
+}
+
+.load-more-button:hover:not(:disabled) {
+    background: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.load-more-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.load-more-button .material-icons {
+    font-size: 1.2rem;
+}
+
+.load-more-button .material-icons.rotating {
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Dark mode support for load more button */
+@media (prefers-color-scheme: dark) {
+    .load-more-button {
+        background: #34495e;
+        border-color: #34495e;
+        color: #ecf0f1;
+    }
+    
+    .load-more-button:hover:not(:disabled) {
+        background: #2c3e50;
+        border-color: #2c3e50;
     }
 }

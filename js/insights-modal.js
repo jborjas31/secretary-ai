@@ -54,22 +54,22 @@ class InsightsModal extends UIComponent {
      */
     attachEventListeners() {
         // Close button
-        const closeBtn = document.getElementById('insightsModalClose');
-        closeBtn.addEventListener('click', () => this.hide());
+        this.registerEvent('#insightsModalClose', 'click', () => this.hide());
 
         // Click outside to close
-        this.element.addEventListener('click', (e) => {
+        this.registerEvent(this.element, 'click', (e) => {
             if (e.target === this.element) {
                 this.hide();
             }
         });
 
-        // Escape key to close
-        document.addEventListener('keydown', (e) => {
+        // Escape key to close - store this for cleanup
+        this.escapeHandler = (e) => {
             if (e.key === 'Escape' && this.isVisible) {
                 this.hide();
             }
-        });
+        };
+        this.documentKeydownId = this.listenerRegistry.add(document, 'keydown', this.escapeHandler);
     }
 
     /**

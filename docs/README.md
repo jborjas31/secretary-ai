@@ -6,7 +6,13 @@ Technical documentation, API references, and development resources for Secretary
 
 ### Architecture & Development
 - **[CLAUDE.md](../CLAUDE.md)** - Complete technical overview, roadmap, and implementation details
-- **[code_review.md](code_review.md)** - Development notes, guidelines, and architecture decisions
+- **[optimizations/](optimizations/)** - Performance optimization documentation
+  - [optimization-plan.md](optimizations/optimization-plan.md) - Complete optimization roadmap (All 5 critical issues resolved! ✅)
+  - **Completed Optimizations:**
+    - [dom-optimization.md](optimizations/completed/dom-optimization.md) - DOM manipulation improvements
+    - [js-loading-optimization.md](optimizations/completed/js-loading-optimization.md) - JavaScript loading optimizations
+    - [event-listener-fix-enhanced.md](optimizations/completed/event-listener-fix-enhanced.md) - Memory leak prevention
+    - [task-filtering-optimization.md](optimizations/completed/task-filtering-optimization.md) - O(1) indexed task filtering
 
 ### API Integration
 - **[openrouter/](openrouter/)** - Complete OpenRouter API documentation
@@ -32,7 +38,7 @@ Technical documentation, API references, and development resources for Secretary
 | Architecture overview | [CLAUDE.md](../CLAUDE.md) |
 | API integration | [openrouter/quickstart.md](openrouter/quickstart.md) |
 | Testing | [Test suite](../tests/) |
-| Development | [code_review.md](code_review.md) |
+| Development | [CLAUDE.md](../CLAUDE.md#development-guide) |
 | Model selection | [openrouter/models.md](openrouter/models.md) |
 | Error handling | [openrouter/errors.md](openrouter/errors.md) |
 
@@ -42,7 +48,7 @@ Technical documentation, API references, and development resources for Secretary
 1. Read [CLAUDE.md](../CLAUDE.md) for architecture understanding
 2. Check [openrouter/quickstart.md](openrouter/quickstart.md) for API setup
 3. Run [test suite](../tests/) to validate environment
-4. Review [code_review.md](code_review.md) for development guidelines
+4. Review [Development Guide](../CLAUDE.md#development-guide) for development guidelines
 
 ### For API Integration
 1. Get OpenRouter API key from [openrouter.ai](https://openrouter.ai/)

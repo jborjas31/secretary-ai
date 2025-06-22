@@ -10,7 +10,7 @@ Secretary AI reads your `tasks.md` file and generates smart, time-aware schedule
 
 1. **Clone and start**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/jborjas31/secretary-ai
    cd secretary_ai
    npm run start
    ```
@@ -18,7 +18,7 @@ Secretary AI reads your `tasks.md` file and generates smart, time-aware schedule
 2. **Configure AI**
    - Get your [OpenRouter API key](https://openrouter.ai/)
    - Click Settings in the app and enter your API key
-   - Default model is DeepSeek R1 (or use the free tier!)
+   - Default model is deepseek-r1 (or use the free tier!)
 
 3. **Start using**
    - Create or update your `tasks.md` file
@@ -27,9 +27,10 @@ Secretary AI reads your `tasks.md` file and generates smart, time-aware schedule
 
 ## Features
 
-- **AI-Powered Scheduling**: Uses DeepSeek R1 (with free option!) to create intelligent schedules
+- **AI-Powered Scheduling**: Uses deepseek-r1 (with free option!) to create intelligent schedules
 - **Progressive Web App**: Install on any device, works offline
 - **Task Management**: Full CRUD operations with natural language date parsing
+- **High Performance**: Instant filtering of 10,000+ tasks with indexed lookups
 - **Date Navigation**: View and plan schedules for any date
 - **Calendar View**: Visual month overview with schedule indicators
 - **Productivity Insights**: Track patterns and completion rates
@@ -56,7 +57,7 @@ secretary_ai/
 │   ├── task-parser.js     # Task processing
 │   ├── calendar-view.js   # Calendar component
 │   ├── insights-modal.js  # Analytics UI
-│   └── [11 more modules]  # Services & utilities
+│   └── [13 more modules]  # Services & utilities
 └── tests/                 # Testing tools
 ```
 
@@ -90,12 +91,14 @@ const FIREBASE_CONFIG = {
 
 ## Recent Updates
 
+- **High-Performance Task Filtering**: Instant search and filtering of 10,000+ tasks
 - **Calendar Navigation**: Click 📅 to view month calendar and jump to any date
 - **Productivity Insights**: Click 📊 to see completion patterns and analytics  
 - **Better Error Messages**: Clear feedback for offline mode, API issues, and timeouts
 - **Task Deduplication**: Automatic prevention and manual cleanup of duplicate tasks
-- **Multi-Model Support**: DeepSeek R1 default with automatic fallbacks
+- **Multi-Model Support**: deepseek-r1 default with automatic fallbacks
 - **Performance Monitoring**: Built-in performance tracking for all operations
+- **Optimized Architecture**: All critical performance bottlenecks resolved
 
 ## Common Issues
 

@@ -31,6 +31,32 @@ Testing tools and validation for Secretary AI functionality.
 2. Open `localhost:8000/tests/test-calendar.html`
 3. Test calendar interactions and visual indicators
 
+### test-dom-diff.html
+**Purpose**: DOM diffing utility testing
+- Element caching and reuse
+- Differential updates performance
+- Memory management
+- Event listener preservation
+- Batch operation efficiency
+
+**Usage**:
+1. Start server: `npm run start`
+2. Open `localhost:8000/tests/test-dom-diff.html`
+3. Run performance benchmarks and verify DOM updates
+
+### test-lazy-loading.html
+**Purpose**: Module lazy loading testing
+- Dynamic import functionality
+- Loading state indicators
+- Module caching behavior
+- Error handling for failed loads
+- Performance impact measurement
+
+**Usage**:
+1. Start server: `npm run start`
+2. Open `localhost:8000/tests/test-lazy-loading.html`
+3. Test module loading sequences and timing
+
 ## Quick Start
 
 ```bash

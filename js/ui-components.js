@@ -3,10 +3,12 @@
  * Provides reusable components for Phase 2 task management features
  */
 
+import { EventListenerRegistry } from './event-registry.js';
+
 class UIComponent {
     constructor() {
         this.element = null;
-        this.eventHandlers = new Map();
+        this.listenerRegistry = new EventListenerRegistry();
     }
 
     /**
@@ -30,34 +32,55 @@ class UIComponent {
     }
 
     /**
-     * Add event listener with automatic cleanup
+     * Register event listener with automatic tracking
+     * Subclasses should use this instead of direct addEventListener
      */
-    on(event, selector, handler) {
-        if (!this.element) return;
+    registerEvent(selector, event, handler, options = false) {
+        // Handle both element and selector
+        const element = typeof selector === 'string' 
+            ? this.element.querySelector(selector) 
+            : selector;
+            
+        if (element) {
+            return this.listenerRegistry.add(element, event, handler, options);
+        }
         
-        const wrappedHandler = (e) => {
-            if (e.target.matches(selector)) {
-                handler(e);
-            }
-        };
-        
-        this.element.addEventListener(event, wrappedHandler);
-        this.eventHandlers.set(`${event}-${selector}`, wrappedHandler);
+        console.warn(`Element not found for selector: ${selector}`);
+        return null;
     }
 
     /**
-     * Clean up event listeners
+     * Register delegated event on the component root
+     */
+    registerDelegatedEvent(event, selector, handler) {
+        const delegatedHandler = (e) => {
+            if (e.target.matches(selector)) {
+                handler.call(this, e);
+            }
+        };
+        
+        return this.listenerRegistry.add(this.element, event, delegatedHandler, true);
+    }
+
+    /**
+     * Add event listener with automatic cleanup (legacy method for compatibility)
+     */
+    on(event, selector, handler) {
+        if (!this.element) return;
+        this.registerDelegatedEvent(event, selector, handler);
+    }
+
+    /**
+     * Clean up all component resources
      */
     destroy() {
-        if (!this.element) return;
+        // Clear all tracked listeners
+        this.listenerRegistry.clear();
         
-        this.eventHandlers.forEach((handler, key) => {
-            const [event] = key.split('-');
-            this.element.removeEventListener(event, handler);
-        });
-        
-        this.eventHandlers.clear();
-        this.element.remove();
+        // Remove element from DOM
+        if (this.element) {
+            this.element.remove();
+        }
     }
 
     /**

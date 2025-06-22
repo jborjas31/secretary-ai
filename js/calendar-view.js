@@ -118,17 +118,17 @@ class CalendarView extends UIComponent {
 
     attachEventListeners() {
         // Month navigation
-        this.element.querySelector('#calPrevMonth').addEventListener('click', () => this.navigateMonth(-1));
-        this.element.querySelector('#calNextMonth').addEventListener('click', () => this.navigateMonth(1));
+        this.registerEvent('#calPrevMonth', 'click', () => this.navigateMonth(-1));
+        this.registerEvent('#calNextMonth', 'click', () => this.navigateMonth(1));
         
         // Close button
-        this.element.querySelector('#calClose').addEventListener('click', () => {
+        this.registerEvent('#calClose', 'click', () => {
             this.hide();
             this.options.onClose();
         });
         
-        // Date selection
-        this.element.querySelector('#calendarGrid').addEventListener('click', (e) => {
+        // Date selection - use delegated event for calendar days
+        this.registerDelegatedEvent('click', '.calendar-day', (e) => {
             const dayElement = e.target.closest('.calendar-day');
             if (dayElement && !dayElement.classList.contains('empty') && !dayElement.dataset.disabled) {
                 const dateStr = dayElement.dataset.date;
@@ -144,11 +144,11 @@ class CalendarView extends UIComponent {
         let touchStartX = 0;
         let touchEndX = 0;
         
-        this.element.addEventListener('touchstart', (e) => {
+        this.registerEvent(this.element, 'touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
         }, { passive: true });
         
-        this.element.addEventListener('touchend', (e) => {
+        this.registerEvent(this.element, 'touchend', (e) => {
             touchEndX = e.changedTouches[0].screenX;
             this.handleSwipe();
         }, { passive: true });

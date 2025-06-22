@@ -219,7 +219,7 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format:
   "schedule": [
     {
       "time": "14:30",
-      "task": "Task description",
+      "text": "Task description",
       "duration": "30 minutes", 
       "priority": "high",
       "category": "urgent"
@@ -277,7 +277,7 @@ Use these priorities: high, medium, low`;
                                                     description: 'Time in HH:MM format (24-hour)',
                                                     pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
                                                 },
-                                                task: {
+                                                text: {
                                                     type: 'string',
                                                     description: 'Brief description of the task'
                                                 },
@@ -296,7 +296,7 @@ Use these priorities: high, medium, low`;
                                                     description: 'Task category'
                                                 }
                                             },
-                                            required: ['time', 'task', 'duration', 'priority', 'category'],
+                                            required: ['time', 'text', 'duration', 'priority', 'category'],
                                             additionalProperties: false
                                         }
                                     },
@@ -672,7 +672,7 @@ IMPORTANT: Respond with ONLY valid JSON in this exact format:
   "schedule": [
     {
       "time": "14:30",
-      "task": "Task description",
+      "text": "Task description",
       "duration": "30 minutes", 
       "priority": "high",
       "category": "urgent",

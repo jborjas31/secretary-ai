@@ -26,11 +26,21 @@ async function initializeApp() {
         console.log('📦 Phase 1: Loading primary modules...');
         const primaryModules = await moduleLoader.loadModules([
             { path: './validation-utils.js', export: 'ValidationUtils', name: 'ValidationUtils' },
+            { path: './event-registry.js', export: 'EventListenerRegistry', name: 'EventListenerRegistry' },
+            { path: './event-registry.js', export: 'ComponentWithListeners', name: 'ComponentWithListeners' },
             { path: './task-parser.js', export: 'TaskParser', name: 'TaskParser' },
             { path: './llm-service.js', export: 'LLMService', name: 'LLMService' },
             { path: './firestore.js', export: 'FirestoreService', name: 'FirestoreService' },
             { path: './task-data-service.js', export: 'TaskDataService', name: 'TaskDataService' },
-            { path: './schedule-data-service.js', export: 'ScheduleDataService', name: 'ScheduleDataService' }
+            { path: './schedule-data-service.js', export: 'ScheduleDataService', name: 'ScheduleDataService' },
+            { path: './task-index-manager.js', export: 'TaskIndexManager', name: 'TaskIndexManager' },
+            { path: './app-state.js', export: 'AppState', name: 'AppState' },
+            { path: './base-manager.js', export: 'BaseManager', name: 'BaseManager' },
+            { path: './managers/settings-manager.js', export: 'SettingsManager', name: 'SettingsManager' },
+            { path: './managers/date-navigation-manager.js', export: 'DateNavigationManager', name: 'DateNavigationManager' },
+            { path: './managers/ui-manager.js', export: 'UIManager', name: 'UIManager' },
+            { path: './managers/schedule-manager.js', export: 'ScheduleManager', name: 'ScheduleManager' },
+            { path: './managers/task-manager.js', export: 'TaskManager', name: 'TaskManager' }
         ]);
 
         // Make primary modules globally available for compatibility
@@ -38,13 +48,14 @@ async function initializeApp() {
             window[name] = module;
         });
 
-        // Phase 2: Load the main app module
-        console.log('📦 Phase 2: Loading main application...');
-        const SecretaryApp = await moduleLoader.loadModule('./app.js', 'SecretaryApp');
+        // Phase 2: Load the main app controller module
+        console.log('📦 Phase 2: Loading main application controller...');
+        const AppController = await moduleLoader.loadModule('./app-controller.js', 'AppController');
         
         // Create app instance
-        appInstance = new SecretaryApp();
+        appInstance = new AppController();
         window.app = appInstance;
+        window.SecretaryApp = AppController; // Maintain backward compatibility
 
         // Initialize the app
         await appInstance.initialize();

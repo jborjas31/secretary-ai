@@ -222,6 +222,40 @@ class PerformanceMonitor {
         
         console.groupEnd();
     }
+    
+    /**
+     * Add event listener metrics to performance tracking
+     */
+    addListenerMetrics() {
+        if (window.app && window.app.listenerRegistry) {
+            // Record active listener count
+            const activeListeners = window.app.listenerRegistry.getActiveCount();
+            this.recordMetric('active-listeners', activeListeners);
+            
+            // Track potential leaks
+            let detachedCount = 0;
+            window.app.listenerRegistry.listeners.forEach((listener) => {
+                if (!document.body.contains(listener.element)) {
+                    detachedCount++;
+                }
+            });
+            
+            if (detachedCount > 0) {
+                this.recordMetric('detached-listeners', detachedCount);
+                console.warn(`Performance Monitor: ${detachedCount} listeners on detached elements detected`);
+            }
+            
+            return {
+                activeListeners,
+                detachedListeners: detachedCount
+            };
+        }
+        
+        return {
+            activeListeners: 0,
+            detachedListeners: 0
+        };
+    }
 }
 
 // Create global instance

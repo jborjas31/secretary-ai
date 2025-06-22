@@ -8,6 +8,7 @@ exclude:
   - package-lock.json
   - README.md
   - .gitignore
+  - tests/
 
 # Site settings
 title: Secretary AI

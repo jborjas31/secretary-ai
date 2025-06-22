@@ -105,12 +105,11 @@ class PatternAnalyzer {
                 const startDate = new Date();
                 startDate.setDate(startDate.getDate() - 30);
                 
-                const result = await this.scheduleDataService.getScheduleHistory(
+                // Use getAllScheduleHistory to ensure we get complete data for pattern analysis
+                historicalData = await this.scheduleDataService.getAllScheduleHistory(
                     startDate, 
-                    endDate, 
-                    { limit: 365 } // Get all data for the period
+                    endDate
                 );
-                historicalData = result.schedules;
             }
 
             // Reset patterns for fresh analysis

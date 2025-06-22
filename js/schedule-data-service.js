@@ -191,22 +191,22 @@ class ScheduleDataService {
      * @param {Object} options - Options object
      * @param {boolean} options.includeAnalytics - Include analytics data (default: true)
      * @param {number} options.limit - Maximum number of results (default: 30)
-     * @param {number} options.offset - Number of results to skip (default: 0)
+     * @param {DocumentSnapshot} options.startAfterDoc - Document to start after for pagination
      * @returns {Object} Object containing schedules array and pagination info
      */
     async getScheduleHistory(startDate, endDate, options = {}) {
         const { 
             includeAnalytics = true, 
             limit = 30, 
-            offset = 0 
+            startAfterDoc = null
         } = options;
         if (!this.isAvailable() || !this.firestoreService.isAvailable()) {
             console.warn('Cannot get schedule history - service not available');
-            return { schedules: [], total: 0, hasMore: false };
+            return { schedules: [], lastDoc: null, hasMore: false };
         }
 
         try {
-            const { query, where, orderBy, getDocs, collection } = this.firestoreService.firestoreModules;
+            const { query, where, orderBy, limit: limitFn, startAfter, getDocs, collection } = this.firestoreService.firestoreModules;
             
             const startKey = startDate.toISOString().split('T')[0];
             const endKey = endDate.toISOString().split('T')[0];
@@ -217,51 +217,90 @@ class ScheduleDataService {
                 `users/${this.userId}/history`
             );
             
-            const q = query(
+            // Build query with proper pagination
+            let q = query(
                 historyCollectionRef,
                 where('__name__', '>=', startKey),
                 where('__name__', '<=', endKey),
-                orderBy('__name__', 'desc')
+                orderBy('__name__', 'desc'),
+                limitFn(limit + 1) // Get one extra to check if there are more
             );
             
+            // Add cursor if provided
+            if (startAfterDoc) {
+                q = query(
+                    historyCollectionRef,
+                    where('__name__', '>=', startKey),
+                    where('__name__', '<=', endKey),
+                    orderBy('__name__', 'desc'),
+                    startAfter(startAfterDoc),
+                    limitFn(limit + 1)
+                );
+            }
+            
             const querySnapshot = await getDocs(q);
-            const allSchedules = [];
+            const schedules = [];
+            let lastDoc = null;
             
             querySnapshot.forEach((doc) => {
-                const scheduleData = doc.data();
-                allSchedules.push({
-                    id: doc.id,
-                    date: doc.id,
-                    ...scheduleData
-                });
-                
-                // Update cache with LRU tracking for accessed items only
-                if (allSchedules.length > offset && allSchedules.length <= offset + limit) {
+                if (schedules.length < limit) {
+                    const scheduleData = doc.data();
+                    schedules.push({
+                        id: doc.id,
+                        date: doc.id,
+                        ...scheduleData
+                    });
+                    
+                    // Update cache with LRU tracking
                     this.historyCache.set(doc.id, scheduleData);
                     this.trackCacheAccess('history', doc.id);
+                    lastDoc = doc;
                 }
             });
             
-            // Apply pagination
-            const paginatedSchedules = allSchedules.slice(offset, offset + limit);
-            const hasMore = (offset + limit) < allSchedules.length;
+            // Check if there are more results
+            const hasMore = querySnapshot.size > limit;
             
             // Enforce cache limits after batch update
             this.enforceCacheLimits();
             
-            console.log(`Loaded ${paginatedSchedules.length} of ${allSchedules.length} schedules (${startKey} to ${endKey})`);
+            console.log(`Loaded ${schedules.length} schedules (${startKey} to ${endKey}, has more: ${hasMore})`);
             
             return {
-                schedules: paginatedSchedules,
-                total: allSchedules.length,
-                offset: offset,
-                limit: limit,
-                hasMore: hasMore
+                schedules: schedules,
+                lastDoc: lastDoc,
+                hasMore: hasMore,
+                startDate: startKey,
+                endDate: endKey
             };
         } catch (error) {
             console.error('Error loading schedule history range:', error);
-            return { schedules: [], total: 0, hasMore: false };
+            return { schedules: [], lastDoc: null, hasMore: false };
         }
+    }
+
+    /**
+     * Get all schedule history within a date range (for backward compatibility)
+     * WARNING: This loads ALL schedules and may cause performance issues with large datasets
+     * Consider using getScheduleHistory() with pagination for better performance
+     */
+    async getAllScheduleHistory(startDate, endDate) {
+        const allSchedules = [];
+        let lastDoc = null;
+        let hasMore = true;
+        
+        while (hasMore) {
+            const result = await this.getScheduleHistory(startDate, endDate, {
+                limit: 100,
+                startAfterDoc: lastDoc
+            });
+            
+            allSchedules.push(...result.schedules);
+            lastDoc = result.lastDoc;
+            hasMore = result.hasMore;
+        }
+        
+        return allSchedules;
     }
 
     /**
@@ -281,7 +320,7 @@ class ScheduleDataService {
             // Update task completion in schedule
             if (schedule.schedule) {
                 const taskIndex = schedule.schedule.findIndex(task => 
-                    task.id === taskId || task.task?.includes(taskId)
+                    task.id === taskId || task.text?.includes(taskId)
                 );
                 
                 if (taskIndex !== -1) {
@@ -311,12 +350,9 @@ class ScheduleDataService {
      * Get completion statistics for a date range
      */
     async getCompletionStats(startDate, endDate) {
-        // Get all schedules without pagination for stats calculation
-        const result = await this.getScheduleHistory(startDate, endDate, { 
-            includeAnalytics: true,
-            limit: 365 // Get up to a year of data for stats
-        });
-        const schedules = result.schedules;
+        // For stats calculation, we need all schedules in the range
+        // Use getAllScheduleHistory for complete data
+        const schedules = await this.getAllScheduleHistory(startDate, endDate);
         
         const stats = {
             totalDays: schedules.length,

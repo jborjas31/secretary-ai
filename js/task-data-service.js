@@ -241,7 +241,9 @@ class TaskDataService {
     }
 
     /**
-     * Get all tasks
+     * Get all tasks - backward compatible method that loads all tasks
+     * WARNING: This loads ALL tasks and may cause performance issues with large datasets
+     * Consider using getAllTasksPaginated() for better performance
      */
     async getAllTasks() {
         if (!this.isAvailable()) {
@@ -250,21 +252,26 @@ class TaskDataService {
         }
 
         try {
-            const { getDocs } = this.firestoreService.firestoreModules;
+            // Load all tasks by fetching pages until no more data
+            const allTasks = [];
+            let lastDoc = null;
+            let hasMore = true;
+            const pageSize = 100; // Larger page size for backward compatibility
             
-            const collectionRef = this.firestoreService.getUserDocRef('tasks');
-            const querySnapshot = await getDocs(collectionRef);
+            while (hasMore) {
+                const result = await this.getAllTasksPaginated({
+                    limit: pageSize,
+                    startAfterDoc: lastDoc
+                });
+                
+                allTasks.push(...result.tasks);
+                lastDoc = result.lastDoc;
+                hasMore = result.hasMore;
+            }
             
-            const tasks = [];
-            querySnapshot.forEach((doc) => {
-                const taskData = doc.data();
-                tasks.push(taskData);
-                this.taskCache.set(doc.id, taskData);
-            });
-            
-            console.log(`Loaded ${tasks.length} tasks from Firestore`);
+            console.log(`Loaded ${allTasks.length} total tasks from Firestore`);
             this.lastSync = new Date().toISOString();
-            return tasks;
+            return allTasks;
         } catch (error) {
             console.error('Error getting all tasks:', error);
             return Array.from(this.taskCache.values());
@@ -272,7 +279,90 @@ class TaskDataService {
     }
 
     /**
+     * Get tasks with pagination support
+     * @param {Object} options Pagination options
+     * @param {number} options.limit Maximum number of tasks to return (default: 50)
+     * @param {DocumentSnapshot} options.startAfterDoc Firestore document to start after
+     * @param {string} options.orderByField Field to order by (default: 'createdAt')
+     * @param {string} options.orderDirection Order direction: 'asc' or 'desc' (default: 'desc')
+     * @returns {Object} { tasks: Array, lastDoc: DocumentSnapshot, hasMore: boolean }
+     */
+    async getAllTasksPaginated(options = {}) {
+        const {
+            limit = 50,
+            startAfterDoc = null,
+            orderByField = 'createdAt',
+            orderDirection = 'desc'
+        } = options;
+
+        if (!this.isAvailable()) {
+            console.warn('TaskDataService not available, returning cached tasks');
+            const cachedTasks = Array.from(this.taskCache.values());
+            return {
+                tasks: cachedTasks.slice(0, limit),
+                lastDoc: null,
+                hasMore: cachedTasks.length > limit
+            };
+        }
+
+        try {
+            const { query, orderBy, limit: limitFn, startAfter, getDocs, collection } = this.firestoreService.firestoreModules;
+            
+            // Build query with pagination
+            const collectionRef = collection(this.firestoreService.db, `users/${this.userId}/tasks`);
+            let q = query(
+                collectionRef,
+                orderBy(orderByField, orderDirection),
+                limitFn(limit + 1) // Get one extra to check if there are more
+            );
+            
+            // Add cursor if provided
+            if (startAfterDoc) {
+                q = query(
+                    collectionRef,
+                    orderBy(orderByField, orderDirection),
+                    startAfter(startAfterDoc),
+                    limitFn(limit + 1)
+                );
+            }
+            
+            const querySnapshot = await getDocs(q);
+            const tasks = [];
+            let lastDoc = null;
+            
+            querySnapshot.forEach((doc) => {
+                if (tasks.length < limit) {
+                    const taskData = doc.data();
+                    tasks.push(taskData);
+                    this.taskCache.set(doc.id, taskData);
+                    lastDoc = doc;
+                }
+            });
+            
+            // Check if there are more results
+            const hasMore = querySnapshot.size > limit;
+            
+            console.log(`Loaded ${tasks.length} tasks (page size: ${limit}, has more: ${hasMore})`);
+            
+            return {
+                tasks,
+                lastDoc,
+                hasMore
+            };
+        } catch (error) {
+            console.error('Error getting paginated tasks:', error);
+            const cachedTasks = Array.from(this.taskCache.values());
+            return {
+                tasks: cachedTasks.slice(0, limit),
+                lastDoc: null,
+                hasMore: cachedTasks.length > limit
+            };
+        }
+    }
+
+    /**
      * Get tasks by section
+     * @deprecated Use getTasksBySectionPaginated for better performance
      */
     async getTasksBySection(section) {
         const allTasks = await this.getAllTasks();
@@ -280,7 +370,87 @@ class TaskDataService {
     }
 
     /**
+     * Get tasks by section with pagination
+     * @param {string} section Section name to filter by
+     * @param {Object} paginationOptions Pagination options
+     * @returns {Object} { tasks: Array, lastDoc: DocumentSnapshot, hasMore: boolean }
+     */
+    async getTasksBySectionPaginated(section, paginationOptions = {}) {
+        if (!this.isAvailable()) {
+            // Fallback to client-side filtering of cache
+            const allCached = Array.from(this.taskCache.values());
+            const filtered = allCached.filter(task => task.section === section);
+            const limit = paginationOptions.limit || 50;
+            return {
+                tasks: filtered.slice(0, limit),
+                lastDoc: null,
+                hasMore: filtered.length > limit
+            };
+        }
+
+        try {
+            const { query, where, orderBy, limit: limitFn, startAfter, getDocs, collection } = this.firestoreService.firestoreModules;
+            const {
+                limit = 50,
+                startAfterDoc = null,
+                orderByField = 'createdAt',
+                orderDirection = 'desc'
+            } = paginationOptions;
+            
+            // Build query with section filter and pagination
+            const collectionRef = collection(this.firestoreService.db, `users/${this.userId}/tasks`);
+            let q = query(
+                collectionRef,
+                where('section', '==', section),
+                orderBy(orderByField, orderDirection),
+                limitFn(limit + 1)
+            );
+            
+            if (startAfterDoc) {
+                q = query(
+                    collectionRef,
+                    where('section', '==', section),
+                    orderBy(orderByField, orderDirection),
+                    startAfter(startAfterDoc),
+                    limitFn(limit + 1)
+                );
+            }
+            
+            const querySnapshot = await getDocs(q);
+            const tasks = [];
+            let lastDoc = null;
+            
+            querySnapshot.forEach((doc) => {
+                if (tasks.length < limit) {
+                    const taskData = doc.data();
+                    tasks.push(taskData);
+                    this.taskCache.set(doc.id, taskData);
+                    lastDoc = doc;
+                }
+            });
+            
+            const hasMore = querySnapshot.size > limit;
+            
+            console.log(`Loaded ${tasks.length} tasks for section ${section} (has more: ${hasMore})`);
+            
+            return {
+                tasks,
+                lastDoc,
+                hasMore
+            };
+        } catch (error) {
+            console.error('Error getting tasks by section:', error);
+            return {
+                tasks: [],
+                lastDoc: null,
+                hasMore: false
+            };
+        }
+    }
+
+    /**
      * Get tasks by filters
+     * @deprecated Use getTasksPaginated for better performance
      */
     async getTasks(filters = {}) {
         const allTasks = await this.getAllTasks();
@@ -319,6 +489,63 @@ class TaskDataService {
             
             return true;
         });
+    }
+
+    /**
+     * Get tasks with filters and pagination
+     * Note: Complex filters are applied client-side after fetching a page
+     * For best performance, use section/priority filters which can be applied server-side
+     * @param {Object} filters Filter criteria
+     * @param {Object} paginationOptions Pagination options
+     * @returns {Object} { tasks: Array, lastDoc: DocumentSnapshot, hasMore: boolean }
+     */
+    async getTasksPaginated(filters = {}, paginationOptions = {}) {
+        const { limit = 50 } = paginationOptions;
+        
+        // If we have a section filter, use the optimized section query
+        if (filters.section && Object.keys(filters).length === 1) {
+            return this.getTasksBySectionPaginated(filters.section, paginationOptions);
+        }
+        
+        // Otherwise, we need to fetch pages and filter client-side
+        // This is less efficient but maintains flexibility
+        const result = await this.getAllTasksPaginated(paginationOptions);
+        
+        // Apply filters to the fetched page
+        const filteredTasks = result.tasks.filter(task => {
+            // Apply all filter logic
+            if (filters.section && task.section !== filters.section) {
+                return false;
+            }
+            if (filters.priority && task.priority !== filters.priority) {
+                return false;
+            }
+            if (filters.completed !== undefined && task.completed !== filters.completed) {
+                return false;
+            }
+            if (filters.dateFrom && task.date && new Date(task.date) < new Date(filters.dateFrom)) {
+                return false;
+            }
+            if (filters.dateTo && task.date && new Date(task.date) > new Date(filters.dateTo)) {
+                return false;
+            }
+            if (filters.search) {
+                const searchLower = filters.search.toLowerCase();
+                if (!task.text.toLowerCase().includes(searchLower)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+        
+        // Note: This approach may return fewer results than requested if many are filtered out
+        // A more sophisticated implementation would fetch additional pages until limit is reached
+        return {
+            tasks: filteredTasks,
+            lastDoc: result.lastDoc,
+            hasMore: result.hasMore,
+            filteredCount: result.tasks.length - filteredTasks.length
+        };
     }
 
     /**
