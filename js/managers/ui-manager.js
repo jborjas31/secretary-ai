@@ -85,7 +85,7 @@ export class UIManager extends BaseManager {
         };
         
         // Pass elements reference to app for backward compatibility
-        this.elements = this.app.elements;
+        this.app.elements = elements;
     }
     
     /**

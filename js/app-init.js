@@ -90,8 +90,8 @@ async function preloadSecondaryModules() {
     try {
         // Preload modules that are likely to be used
         await moduleLoader.preloadModules([
-            './ui-components.js',
-            './pattern-analyzer.js'
+            './js/ui-components.js',
+            './js/pattern-analyzer.js'
         ]);
         
         console.log('✅ Secondary modules preloaded');
