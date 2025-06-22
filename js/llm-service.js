@@ -694,3 +694,4 @@ Add "isRollover": true for tasks that were incomplete from previous days`;
 
 // Export for use in other modules
 window.LLMService = LLMService;
+export { LLMService };

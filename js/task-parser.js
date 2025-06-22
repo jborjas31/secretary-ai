@@ -631,3 +631,4 @@ class TaskParser {
 
 // Export for use in other modules
 window.TaskParser = TaskParser;
+export { TaskParser };

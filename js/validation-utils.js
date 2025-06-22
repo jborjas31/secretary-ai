@@ -362,4 +362,6 @@ class ValidationUtils {
 }
 
 // Export for use in other modules
-window.ValidationUtils = new ValidationUtils();
+const validationUtils = new ValidationUtils();
+window.ValidationUtils = validationUtils;
+export { validationUtils as ValidationUtils };

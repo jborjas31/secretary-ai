@@ -368,3 +368,4 @@ class FirestoreService {
 
 // Export for use in other modules
 window.FirestoreService = FirestoreService;
+export { FirestoreService };

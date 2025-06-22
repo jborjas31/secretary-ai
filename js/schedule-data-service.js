@@ -954,3 +954,4 @@ class ScheduleDataService {
 
 // Export for use in other modules
 window.ScheduleDataService = ScheduleDataService;
+export { ScheduleDataService };

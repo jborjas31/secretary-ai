@@ -32,20 +32,20 @@ class AppController extends ComponentWithListeners {
         // Lazy loaded services
         this.patternAnalyzer = null; // Loaded when insights are accessed
         
-        // Initialize managers
-        this.settingsManager = new SettingsManager(this);
-        this.dateNavigationManager = new DateNavigationManager(this);
-        this.uiManager = new UIManager(this);
-        this.scheduleManager = new ScheduleManager(this);
-        this.taskManager = new TaskManager(this);
+        // UI elements (must be initialized before managers)
+        this.elements = {};
         
         // Properties not yet extracted to managers
         this.isOnline = navigator.onLine;
         this.refreshInterval = null;
         this.lastRefresh = null;
         
-        // UI elements (will be initialized in initializeUI)
-        this.elements = {};
+        // Initialize managers (after elements is defined)
+        this.settingsManager = new SettingsManager(this);
+        this.dateNavigationManager = new DateNavigationManager(this);
+        this.uiManager = new UIManager(this);
+        this.scheduleManager = new ScheduleManager(this);
+        this.taskManager = new TaskManager(this);
         
         // UI components for task management
         this.components = {

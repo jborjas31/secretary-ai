@@ -878,3 +878,4 @@ class TaskDataService {
 
 // Export for use in other modules
 window.TaskDataService = TaskDataService;
+export { TaskDataService };
