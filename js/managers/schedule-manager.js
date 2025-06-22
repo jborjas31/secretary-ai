@@ -143,6 +143,9 @@ export class ScheduleManager extends BaseManager {
                 async () => await this.scheduleDataService.loadSchedule(dateKey)
             );
             
+            // Debug logging to track savedSchedule value
+            console.log(`[loadScheduleForDate] savedSchedule for ${dateKey}:`, savedSchedule);
+            
             if (savedSchedule && this.isScheduleValidForDate(savedSchedule, date)) {
                 this.updateState({ currentSchedule: savedSchedule });
                 scheduleCache.set(dateKey, savedSchedule);
@@ -226,6 +229,7 @@ export class ScheduleManager extends BaseManager {
      */
     isScheduleValidForDate(schedule, date) {
         if (!schedule?.generatedAt) return false;
+        if (!schedule?.schedule || schedule.schedule.length === 0) return false;
         
         // Check if schedule was generated for this specific date
         if (schedule.targetDate) {
