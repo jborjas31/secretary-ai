@@ -87,6 +87,9 @@ export class SettingsManager extends BaseManager {
      */
     async saveSettings() {
         try {
+            // Get the settings state *before* the update
+            const oldSettings = this.getSettings();
+
             const newSettings = {
                 openrouterApiKey: this.elements.openrouterKey.value.trim(),
                 selectedModel: this.elements.modelSelect.value,
@@ -103,6 +106,9 @@ export class SettingsManager extends BaseManager {
             this.llmService.setApiKey(newSettings.openrouterApiKey);
             this.llmService.setModel(newSettings.selectedModel);
             
+            // Explicitly update the UI status right after setting the key
+            this.app.uiManager.updateStatus();
+
             // Update model badge display
             this.updateModelBadge();
 
@@ -117,8 +123,12 @@ export class SettingsManager extends BaseManager {
 
             this.app.uiManager.showToast('Settings saved', 'success');
 
-            // Refresh schedule if API key was added and no current schedule
-            if (newSettings.openrouterApiKey && !this.state.currentSchedule) {
+            // Check if the API key was just added
+            const apiKeyJustAdded = newSettings.openrouterApiKey && !oldSettings.openrouterApiKey;
+
+            // Refresh schedule if API key was just added and no schedule is currently generating
+            if (apiKeyJustAdded && !this.state.scheduleGenerating) {
+                this.app.uiManager.showToast('API Key added. Generating your first schedule...', 'info');
                 this.emit('request-schedule-refresh');
             }
         } catch (error) {
