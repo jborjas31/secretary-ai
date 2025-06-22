@@ -18,6 +18,11 @@ class EventListenerRegistry {
      * @returns {number} Listener ID for later removal
      */
     add(element, event, handler, options = false) {
+        if (!element) {
+            console.warn(`Cannot add event listener: element is null for event '${event}'`);
+            return null;
+        }
+        
         const id = ++this.listenerIdCounter;
         
         // Store listener info
