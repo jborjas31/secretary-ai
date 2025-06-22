@@ -127,6 +127,26 @@ class ScheduleDataService {
     }
 
     /**
+     * Migrates a single schedule object to the latest data structure in-memory.
+     * @param {Object} scheduleData The schedule data to check and migrate.
+     * @returns {{migratedData: Object, wasMigrated: boolean}} The migrated data and a flag indicating if migration occurred.
+     */
+    migrateScheduleData(scheduleData) {
+        let wasMigrated = false;
+        if (scheduleData && scheduleData.schedule && Array.isArray(scheduleData.schedule)) {
+            scheduleData.schedule.forEach(task => {
+                // This is the core migration logic:
+                if (task.task && typeof task.text === 'undefined') {
+                    task.text = task.task;
+                    delete task.task;
+                    wasMigrated = true;
+                }
+            });
+        }
+        return { migratedData: scheduleData, wasMigrated };
+    }
+
+    /**
      * Load schedule with fallback to history
      */
     async loadSchedule(date) {
@@ -137,10 +157,22 @@ class ScheduleDataService {
             try {
                 const currentSchedule = await this.storageService.loadSchedule(date);
                 if (currentSchedule) {
-                    this.scheduleCache.set(dateKey, currentSchedule);
+                    // Apply migration if needed
+                    const { migratedData, wasMigrated } = this.migrateScheduleData(currentSchedule);
+
+                    if (wasMigrated) {
+                        console.log(`Data migration performed for schedule: ${dateKey}`);
+                        // Asynchronously save the corrected data back to the database.
+                        // We don't wait for this to complete, so the UI updates instantly.
+                        this.saveSchedule(date, migratedData).catch(err => {
+                            console.error(`Failed to save migrated schedule for ${dateKey}`, err);
+                        });
+                    }
+
+                    this.scheduleCache.set(dateKey, migratedData);
                     this.trackCacheAccess('schedule', dateKey);
                     this.enforceCacheLimits();
-                    return currentSchedule;
+                    return migratedData;
                 }
             } catch (error) {
                 console.error('Error loading current schedule:', error);
