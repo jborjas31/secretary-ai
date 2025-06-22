@@ -9,12 +9,11 @@ class LLMService {
         this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
         this.model = APP_CONFIG.openrouter.defaultModel || 'deepseek/deepseek-r1';
         this.fallbackModels = [
-            'deepseek/deepseek-r1-preview',      // Top reasoning ($0.45/$2.15 per 1M)
-            'anthropic/claude-3.5-sonnet',       // Excellent general purpose ($3/1M)
-            'openai/gpt-4o',                     // Premium OpenAI ($2.50/1M)
-            'deepseek/deepseek-r1-distill-llama-70b', // Balanced 70B model ($0.10/$0.40)
-            'openai/gpt-4o-mini',                // Cost-effective but capable ($0.15/1M)
-            'deepseek/deepseek-r1:free',         // Same model, free tier
+            'deepseek/deepseek-r1:free',         // Same model, free tier (1st fallback)
+            'openai/gpt-4o-mini',                // Cost-effective with good structured output ($0.15/1M)
+            'anthropic/claude-3.5-sonnet',       // Proven reliable for complex scheduling ($3/1M)
+            'deepseek/deepseek-r1-distill-llama-70b', // Alternative DeepSeek model ($0.10/$0.40)
+            'openai/gpt-4o',                     // Premium option for edge cases ($2.50/1M)
             'meta-llama/llama-3.1-8b-instruct:free'  // Emergency free fallback
         ];
         this.maxRetries = 3;
@@ -257,7 +256,7 @@ Use these priorities: high, medium, low`;
                         }
                     ],
                     temperature: 0.3,
-                    max_tokens: 2000,
+                    max_tokens: 4000, // Increased from 2000 to handle 100+ tasks without truncation
                     response_format: {
                         type: 'json_schema',
                         json_schema: {
@@ -533,7 +532,6 @@ Use these priorities: high, medium, low`;
             'anthropic/claude-3.5-sonnet': { input: 0.003, output: 0.015 },
             'deepseek/deepseek-r1': { input: 0.00005, output: 0.0001 },
             'deepseek/deepseek-r1:free': { input: 0, output: 0 },
-            'deepseek/deepseek-r1-preview': { input: 0.00045, output: 0.00215 },
             'deepseek/deepseek-r1-distill-llama-70b': { input: 0.0001, output: 0.0004 },
             'openai/gpt-4o-mini': { input: 0.00015, output: 0.0006 },
             'openai/gpt-4o': { input: 0.0025, output: 0.01 },

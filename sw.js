@@ -17,7 +17,7 @@ const STATIC_ASSETS = [
     './js/app-init.js',
     
     // Primary modules (cached for offline use)
-    './js/app.js',
+    './js/app-controller.js',
     './js/validation-utils.js',
     './js/llm-service.js',
     './js/firestore.js',
