@@ -84,30 +84,41 @@ class TaskDataService {
         try {
             const taskData = this.createTaskData(taskInput);
             
-            // Check for duplicates before creating
-            const existingTasks = await this.getAllTasks();
-            const normalizedNewText = taskData.text.trim().toLowerCase();
+            // Use a more robust duplicate check based on a normalized key
+            const normalizedText = taskData.text.trim().toLowerCase();
+            const duplicateKey = `${taskData.section}-${normalizedText}`;
+
+            // Check against cached tasks first for performance
+            for (const existingTask of this.taskCache.values()) {
+                const existingKey = `${existingTask.section}-${existingTask.text.trim().toLowerCase()}`;
+                if (existingKey === duplicateKey) {
+                     console.warn(`Duplicate task detected (from cache): "${taskData.text}" already exists.`);
+                     return existingTask;
+                }
+            }
             
-            // Check for exact duplicates
-            const duplicate = existingTasks.find(task => {
-                const normalizedExistingText = task.text.trim().toLowerCase();
-                // Check for an exact match in the same section
-                return task.section === taskData.section && 
-                       normalizedExistingText === normalizedNewText;
-            });
-            
-            if (duplicate) {
-                console.warn(`Duplicate task detected: "${taskData.text}" already exists as "${duplicate.text}"`);
-                // Return the existing task instead of creating a duplicate
+            // As a final check, query Firestore for potential duplicates not in the cache.
+            const { query, where, getDocs, collection, limit } = this.firestoreService.firestoreModules;
+            const tasksRef = collection(this.firestoreService.db, `users/${this.userId}/tasks`);
+            const q = query(
+                tasksRef, 
+                where("section", "==", taskData.section), 
+                where("text", "==", taskData.text.trim()),
+                limit(1)
+            );
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                const duplicate = querySnapshot.docs[0].data();
+                console.warn(`Duplicate task detected (from DB): "${taskData.text}" already exists.`);
+                this.taskCache.set(duplicate.id, duplicate); // Add to cache
                 return duplicate;
             }
             
             const { setDoc } = this.firestoreService.firestoreModules;
             
-            // Get document reference
+            // Get document reference and save to Firestore
             const docRef = this.firestoreService.getUserDocRef('tasks', taskData.id);
-            
-            // Save to Firestore
             await setDoc(docRef, taskData);
             
             // Update cache
