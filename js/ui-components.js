@@ -483,14 +483,17 @@ class FloatingActionButton extends UIComponent {
 // Make UIComponent available globally for other components that extend it
 window.UIComponent = UIComponent;
 
-// Also expose all components as a collection
-window.UIComponents = {
+// Create local variable for components collection
+const UIComponents = {
     UIComponent,
     TaskFormComponent,
     TaskListComponent,
     SearchBarComponent,
     FloatingActionButton
 };
+
+// Also expose all components as a collection on window
+window.UIComponents = UIComponents;
 
 // ES6 export for module loader
 export { UIComponent, UIComponents };
