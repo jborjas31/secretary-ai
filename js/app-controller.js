@@ -290,9 +290,7 @@ class AppController extends ComponentWithListeners {
         // Insights button
         this.addEventListener(this.elements.insightsBtn, 'click', () => this.showInsights());
 
-        // Date navigation
-        this.addEventListener(this.elements.prevDateBtn, 'click', () => this.dateNavigationManager.navigateDate(-1));
-        this.addEventListener(this.elements.nextDateBtn, 'click', () => this.dateNavigationManager.navigateDate(1));
+        // Date navigation (handled by DateNavigationManager, except date picker)
         this.addEventListener(this.elements.datePickerBtn, 'click', () => this.dateNavigationManager.showDatePicker());
 
         // Settings modal is handled by SettingsManager

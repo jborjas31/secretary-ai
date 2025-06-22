@@ -279,7 +279,24 @@ export class ScheduleManager extends BaseManager {
         const schedule = currentSchedule.schedule || [];
         
         if (schedule.length === 0) {
-            this.app.elements.emptyState.style.display = 'block';
+            const emptyState = this.app.elements.emptyState;
+            const now = new Date();
+            
+            // Update empty state message based on time of day
+            const h3 = emptyState.querySelector('h3');
+            const p = emptyState.querySelector('p');
+            
+            if (h3 && p) {
+                if (now.getHours() >= 20) { // After 8 PM
+                    h3.textContent = "That's a wrap for today!";
+                    p.textContent = "The AI has determined there are no more tasks to schedule for the evening.";
+                } else {
+                    h3.textContent = "All done for today!";
+                    p.textContent = "No more tasks scheduled for the rest of the day.";
+                }
+            }
+            
+            emptyState.style.display = 'block';
             if (window.domDiff) {
                 window.domDiff.updateContainer(this.app.elements.scheduleList, [], () => null, () => '');
             }
