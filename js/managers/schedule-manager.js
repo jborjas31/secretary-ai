@@ -127,48 +127,57 @@ export class ScheduleManager extends BaseManager {
     async loadScheduleForDate(date) {
         const endMeasure = window.performanceMonitor?.startMeasure('loadScheduleForDate');
         const dateKey = this.app.dateNavigationManager.getDateKey(date);
-        
-        // Check cache first
+
         const scheduleCache = this.state.scheduleCache || new Map();
-        if (scheduleCache.has(dateKey)) {
+        if (scheduleCache.has(dateKey) && scheduleCache.get(dateKey)?.schedule?.length > 0) {
             this.updateState({ currentSchedule: scheduleCache.get(dateKey) });
             this.app.dateNavigationManager.updateDateDisplay();
             endMeasure?.();
             return;
         }
-        
+
         try {
-            // Try to load from storage
             const savedSchedule = await window.performanceMonitor?.measureAsync('scheduleDataService.load',
                 async () => await this.scheduleDataService.loadSchedule(dateKey)
             );
-            
+
             // Debug logging to track savedSchedule value
             console.log(`[loadScheduleForDate] savedSchedule for ${dateKey}:`, savedSchedule);
-            
-            if (savedSchedule && this.isScheduleValidForDate(savedSchedule, date)) {
+
+            // This condition now explicitly checks for a valid, non-empty schedule array.
+            const isValidAndPopulated = savedSchedule && 
+                                        savedSchedule.schedule && 
+                                        savedSchedule.schedule.length > 0 && 
+                                        this.isScheduleValidForDate(savedSchedule, date);
+
+            if (isValidAndPopulated) {
+                console.log(`✅ Valid schedule found for ${dateKey}, loading from storage.`);
                 this.updateState({ currentSchedule: savedSchedule });
                 scheduleCache.set(dateKey, savedSchedule);
                 this.updateState({ scheduleCache });
                 this.app.uiManager.setStatus('online', 'Schedule loaded');
+
             } else {
-                // Check if this is a past date
+                // This block will now correctly execute for future dates with no schedule.
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const requestedDate = new Date(date);
                 requestedDate.setHours(0, 0, 0, 0);
-                
+
                 if (requestedDate < today) {
-                    // Don't generate schedules for past dates
                     console.log(`No schedule exists for past date: ${dateKey}`);
                     this.updateState({ currentSchedule: null });
                     this.app.uiManager.showToast('No schedule was created for this date', 'info');
                 } else {
-                    // Generate new schedule for today or future dates
+                    // Generate a new schedule because none exists or the existing one is invalid/empty.
+                    console.log(`No valid schedule found for ${dateKey}. Generating a new one.`);
                     const newSchedule = await this.generateSchedule(date);
                     this.updateState({ currentSchedule: newSchedule });
-                    scheduleCache.set(dateKey, newSchedule);
-                    this.updateState({ scheduleCache });
+                    
+                    if (newSchedule) { // Only cache if generation was successful
+                        scheduleCache.set(dateKey, newSchedule);
+                        this.updateState({ scheduleCache });
+                    }
                 }
             }
             
