@@ -115,7 +115,7 @@ export class SettingsManager extends BaseManager {
             // Emit settings updated event
             this.emit('settings-updated', newSettings);
 
-            this.app.showToast('Settings saved', 'success');
+            this.app.uiManager.showToast('Settings saved', 'success');
 
             // Refresh schedule if API key was added and no current schedule
             if (newSettings.openrouterApiKey && !this.state.currentSchedule) {
@@ -123,7 +123,7 @@ export class SettingsManager extends BaseManager {
             }
         } catch (error) {
             console.error('Error saving settings:', error);
-            this.app.showToast('Failed to save settings', 'error');
+            this.app.uiManager.showToast('Failed to save settings', 'error');
         }
     }
     
