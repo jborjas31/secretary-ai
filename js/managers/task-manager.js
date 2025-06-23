@@ -220,8 +220,34 @@ export class TaskManager extends BaseManager {
                 // Invalidate cache
                 this.filterCache.invalidate();
                 
-                // Update display
-                this.updateTaskManagementDisplay();
+                // Surgical DOM update to preserve event listeners
+                const taskElement = document.querySelector(`.task-item-editable[data-task-id="${taskId}"]`);
+                
+                if (taskElement) {
+                    // Find the parent section to update its counter
+                    const sectionElement = taskElement.closest('.collapsible-section');
+                    
+                    // Remove the task element from the DOM
+                    taskElement.remove();
+                    
+                    // Update the section's counter badge
+                    if (sectionElement) {
+                        const countSpan = sectionElement.querySelector('.section-count');
+                        if (countSpan) {
+                            const currentCount = parseInt(countSpan.textContent, 10);
+                            const newCount = Math.max(0, currentCount - 1);
+                            countSpan.textContent = newCount.toString();
+                            
+                            // If the section is now empty, remove it entirely
+                            if (newCount === 0) {
+                                sectionElement.remove();
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback: refresh display if element not found
+                    this.updateTaskManagementDisplay();
+                }
             }
             
             // Emit event
