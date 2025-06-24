@@ -14,7 +14,7 @@ app.scheduleManager.generateSchedule()  # Generate schedule in console
 app.manualDeduplication()  # Remove duplicate tasks
 ```
 
-**Before ANY changes**: Read the relevant section in BEHAVIOR_SPEC.md
+**Before ANY changes**: Follow the Documentation Priority (see section below)
 
 ---
 
@@ -48,12 +48,13 @@ app.manualDeduplication()  # Remove duplicate tasks
 
 ### DON'T:
 ❌ Add complexity without clear user value  
-❌ Create documentation unless explicitly asked  
+❌ Create NEW documentation unless explicitly asked  
 ❌ Commit code without running `npm run validate`  
 ❌ Change architecture without strong justification  
 ❌ Assume libraries exist - check package.json first  
 ❌ Make changes that cascade through multiple components  
 ❌ Break existing event flows or patterns  
+❌ Skip updating existing docs when behavior changes  
 
 ---
 
@@ -174,6 +175,100 @@ app.scheduleManager.generateSchedule(true)
 - **Filter/search**: Must call `handleFilterChange()` to reset pagination
 - **Task operations**: Always go through TaskDataService
 - **Date changes**: Use DateNavigationManager methods
+
+---
+
+## 📚 DOCUMENTATION PRIORITY & WORKFLOW
+
+### Documentation Priority Ranking
+
+When working with this codebase, consult documentation in this order:
+
+1. **CLAUDE.md** (This file - Always first!)
+   - Architecture, principles, DO/DON'T lists
+   - Quick commands and guidelines
+
+2. **BEHAVIOR_SPEC.md** (Critical reference)
+   - Expected behavior and debug points
+   - User flows and test scenarios
+   - Check before implementing features
+
+3. **TECHNICAL_DEBT.md** (Awareness & planning)
+   - Known issues and fix order
+   - What NOT to fix (simplicity)
+   - Prevents duplicate work
+
+4. **config.js** (Technical reference)
+   - Central configuration
+   - API endpoints and models
+   - Environment settings
+
+5. **README.md** (User context)
+   - Features from user perspective
+   - Setup and common issues
+
+6. **APP_REVIEW_CHECKLIST.md** (Testing guide)
+   - Systematic testing approach
+   - Past findings and methodology
+
+7. **Other docs** (As needed)
+   - docs/optimizations/ (performance history)
+   - docs/openrouter/ (API reference)
+
+### Quick Decision Tree
+```
+Making a change?
+├── Read CLAUDE.md (principles)
+├── Check BEHAVIOR_SPEC.md (expected behavior)
+├── Review TECHNICAL_DEBT.md (known issues?)
+└── Then implement
+
+Need specific info?
+├── Configuration → config.js
+├── Testing → APP_REVIEW_CHECKLIST.md
+├── Performance → optimization docs
+└── API/LLM → openrouter docs
+```
+
+### Documentation Update Workflow
+
+**When to Update Documentation:**
+
+1. **BEHAVIOR_SPEC.md** - Update when:
+   - Adding new features (add user flow)
+   - Changing expected behavior
+   - Finding new debug points
+   - Adding test scenarios
+
+2. **TECHNICAL_DEBT.md** - Update when:
+   - Discovering new technical debt
+   - Fixing items from the list
+   - Finding debt that should NOT be fixed
+
+3. **CLAUDE.md** - Update when:
+   - Architecture changes
+   - New development patterns
+   - Principle clarifications
+   - Common tasks change
+
+4. **README.md** - Update when:
+   - User-visible features change
+   - Setup process changes
+   - New common issues identified
+
+**Update Process:**
+1. Make code changes
+2. Update relevant documentation IN THE SAME COMMIT
+3. If behavior changed → Update BEHAVIOR_SPEC.md
+4. If architecture changed → Update CLAUDE.md
+5. If new debt found → Update TECHNICAL_DEBT.md
+6. Run `npm run validate` before committing
+
+**Documentation Quality Checklist:**
+- [ ] Is the change documented where future Claude would look?
+- [ ] Are debug points/line numbers still accurate?
+- [ ] Do examples still work?
+- [ ] Is the language clear for a learning developer?
 
 ---
 
