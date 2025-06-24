@@ -40,19 +40,20 @@ app.manualDeduplication()  # Remove duplicate tasks
 ✅ Keep solutions simple and understandable  
 ✅ Explain changes clearly for learning  
 ✅ Test on real devices, not just responsive mode  
-✅ Enhance existing features rather than rebuild  
+✅ Enhance existing features (unless rebuild is simpler)  
 ✅ Check BEHAVIOR_SPEC.md before making changes  
 ✅ Maintain stability - this is a daily-use app  
 ✅ Consider system-wide impact before changes  
 ✅ Document architectural decisions  
+✅ Use judgment - propose alternatives when restricted  
 
 ### DON'T:
 ❌ Add complexity without clear user value  
-❌ Create NEW documentation unless explicitly asked  
+❌ Create NEW documentation files without discussing first  
 ❌ Commit code without running `npm run validate`  
-❌ Change architecture without strong justification  
+❌ Change core architecture patterns without discussing trade-offs  
 ❌ Assume libraries exist - check package.json first  
-❌ Make changes that cascade through multiple components  
+❌ Make changes that cascade without careful impact analysis  
 ❌ Break existing event flows or patterns  
 ❌ Skip updating existing docs when behavior changes  
 
@@ -88,6 +89,34 @@ js/
 - **Module loading**: Defined in app-init.js (order matters!)
 - **Performance**: Lazy loading, DOM diffing, indexed search
 - **Capacity**: 8-hour workday, tasks roll over if incomplete
+
+---
+
+## 🧠 USE YOUR JUDGMENT
+
+While following the principles above, remember:
+- **Context matters** - Some rules have exceptions
+- **Discuss trade-offs** - Explain pros/cons when breaking a guideline
+- **Propose alternatives** - If restricted, suggest workarounds
+- **Ask when unsure** - Better to clarify than assume
+
+### Fast Track Changes (Minimal Process)
+These changes can be made without extensive analysis:
+- Fixing typos in comments or documentation
+- Removing debug console.log statements
+- Renaming variables for clarity (within same scope)
+- Updating outdated comments to match code
+- Fixing obvious syntax issues
+- Adding missing semicolons or formatting
+
+### When Guidelines Conflict
+If following one principle conflicts with another:
+1. Prioritize user value and app stability
+2. Choose simplicity over perfection
+3. Document why you chose one approach over another
+4. Ask the user if genuinely uncertain
+
+Remember: These guidelines exist to help, not hinder. Use them wisely.
 
 ---
 
