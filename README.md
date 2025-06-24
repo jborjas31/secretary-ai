@@ -51,12 +51,15 @@ secretary_ai/
 │   ├── calendar.css       # Calendar view
 │   └── insights.css       # Insights modal
 ├── js/                    # Application logic
-│   ├── app.js             # Main controller
+│   ├── app-controller.js  # Main coordinator
+│   ├── managers/          # Feature managers
+│   │   ├── task-manager.js
+│   │   ├── schedule-manager.js
+│   │   └── [3 more managers]
 │   ├── llm-service.js     # AI integration
-│   ├── task-parser.js     # Task processing
-│   ├── calendar-view.js   # Calendar component
-│   ├── insights-modal.js  # Analytics UI
-│   └── [13 more modules]  # Services & utilities
+│   ├── task-data-service.js # Task storage
+│   ├── firestore.js       # Cloud sync
+│   └── [15+ modules]      # Services & utilities
 └── tests/                 # Testing tools
 ```
 

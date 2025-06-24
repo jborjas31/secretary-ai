@@ -885,9 +885,9 @@ export class TaskManager extends BaseManager {
             this.currentTasks.splice(taskIndex, 1);
         }
         
-        // Refresh filters and display
+        // Only refresh filters, don't update display
+        // The surgical DOM update in deleteTask() already handled the UI
         this.applyTaskFilters();
-        this.updateTaskManagementDisplay();
     }
 
     /**

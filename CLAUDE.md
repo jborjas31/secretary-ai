@@ -1,299 +1,234 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with this personal productivity app.
 
-## Quick Navigation
-- [Essential Guidelines](#essential-guidelines)
-- [Current System](#current-system)
-- [Implementation Status](#implementation-status)
-- [Known Issues](#known-issues--technical-debt)
-- [Development Guide](#development-guide)
-- [Future Roadmap](#future-roadmap)
+## 🚀 Quick Start for Claude
 
----
+**What this is**: A personal task management and scheduling app for a single user who is learning to program.
 
-# ESSENTIAL GUIDELINES
+**Key commands you'll need**:
+```bash
+npm run validate   # Check JS syntax before committing
+npm run serve     # Start dev server
+app.scheduleManager.generateSchedule()  # Generate schedule in console
+app.manualDeduplication()  # Remove duplicate tasks
+```
 
-## 🎯 Key Development Principles
-- **Simplicity First**: Default to simple solutions, add complexity only when it provides real value
-- **No Build Process**: Static PWA - no webpack/babel/transpilation
-- **Offline First**: Everything works without internet connectivity
-- **Single User**: No authentication complexity (uses fixed `default-user` ID)
-- **Current Status**: Phase 3 (Multi-Date System) ✅ COMPLETE
-
-## Design Philosophy
-
-1. **Start Simple**: Use existing patterns, browser APIs, and straightforward solutions
-2. **Add Complexity Only When**:
-   - It significantly improves user experience
-   - It solves real performance/reliability issues
-   - It reduces substantial code duplication
-   - The simple solution has clear limitations
-
-3. **Decision Process**:
-   - What's the simplest solution?
-   - Does it have significant drawbacks?
-   - Does complexity provide proportional value?
-   - Document why if choosing complexity
+**Before ANY changes**: Read the relevant section in BEHAVIOR_SPEC.md
 
 ---
 
-# CURRENT SYSTEM
+## 📋 CONTEXT & PURPOSE
 
-## Architecture Overview
+### This is a Personal Learning Project
+- Built for one user's personal productivity needs
+- User is a non-programmer learning to code
+- Keep explanations clear and educational
+- No multi-user features needed - uses fixed `default-user` ID
 
-**Offline-first PWA** with modular, service-oriented architecture:
+### What You're Working With
+- **Offline-first PWA** - Works without internet
+- **No build process** - Plain JavaScript, no webpack/babel
+- **Simple architecture** - Prioritize clarity over cleverness
+- **Phase 3 Complete** - Multi-date system is working
 
-### Core Architecture (After Code Splitting)
+---
 
-**Main Controller**:
-- **AppController** (`app-controller.js`) - Main coordinator (954 lines, reduced from 2,779)
+## 🎯 CORE PRINCIPLES
 
-**Managers** (extracted from original app.js):
-- **SettingsManager** (`managers/settings-manager.js`) - Settings and configuration
-- **DateNavigationManager** (`managers/date-navigation-manager.js`) - Date navigation and calendar
-- **UIManager** (`managers/ui-manager.js`) - UI updates and user feedback
-- **ScheduleManager** (`managers/schedule-manager.js`) - Schedule generation and display
-- **TaskManager** (`managers/task-manager.js`) - Task CRUD and filtering
+### DO:
+✅ Keep solutions simple and understandable  
+✅ Explain changes clearly for learning  
+✅ Test on real devices, not just responsive mode  
+✅ Enhance existing features rather than rebuild  
+✅ Check BEHAVIOR_SPEC.md before making changes  
+✅ Maintain stability - this is a daily-use app  
+✅ Consider system-wide impact before changes  
+✅ Document architectural decisions  
 
-**Core Services**:
-- **TaskParser** (`task-parser.js`) - Converts tasks.md to structured data
-- **LLMService** (`llm-service.js`) - OpenRouter API with fallback models
-- **TaskDataService** (`task-data-service.js`) - Task CRUD with pagination
-- **ScheduleDataService** (`schedule-data-service.js`) - Schedule persistence with pagination
-- **StorageService** (`storage.js`) - Local/cloud sync coordination
-- **FirestoreService** (`firestore.js`) - Cloud sync backend
-- **PatternAnalyzer** (`pattern-analyzer.js`) - Productivity analytics
-- **CalendarView** (`calendar-view.js`) - Month navigation UI
-- **InsightsModal** (`insights-modal.js`) - Analytics dashboard
-- **PerformanceMonitor** (`performance-monitor.js`) - Performance tracking
-- **TaskIndexManager** (`task-index-manager.js`) - Indexed task filtering with O(1) lookups
+### DON'T:
+❌ Add complexity without clear user value  
+❌ Create documentation unless explicitly asked  
+❌ Commit code without running `npm run validate`  
+❌ Change architecture without strong justification  
+❌ Assume libraries exist - check package.json first  
+❌ Make changes that cascade through multiple components  
+❌ Break existing event flows or patterns  
 
-### Data Flow
-1. TaskDataService loads from Firestore (or TaskParser from tasks.md)
-2. User navigates date → ScheduleDataService checks for schedule
-3. If no schedule → LLMService generates with multi-day context
-4. UI renders with calendar, insights, and task management
+---
+
+## 🏗️ CURRENT ARCHITECTURE
+
+### Core Structure
+```
+js/
+├── app-controller.js          # Main coordinator
+├── managers/                  # Feature managers
+│   ├── settings-manager.js    # User preferences
+│   ├── date-navigation-manager.js  # Calendar/dates
+│   ├── ui-manager.js          # UI updates
+│   ├── schedule-manager.js    # Schedule generation
+│   └── task-manager.js        # Task CRUD
+└── services/
+    ├── llm-service.js         # AI scheduling
+    ├── task-data-service.js   # Task storage
+    ├── schedule-data-service.js # Schedule storage
+    └── firestore.js           # Cloud sync
+```
+
+### How It Works
+1. **Tasks** stored in Firestore (no more tasks.md file)
+2. **Schedules** generated daily using AI with multi-day context
+3. **UI** updates through managers coordinating services
+4. **Sync** happens automatically with offline support
 
 ### Key Technical Details
-
-**Firestore Structure**:
-```
-users/default-user/
-├── schedules/{date}     # Daily schedules
-├── history/{date}       # Historical records
-├── tasks/{task-id}      # Individual tasks
-├── task_states/current  # Completion status
-└── settings/            # User preferences
-```
-
-**Configuration** (`config.js`):
-- Auto-detects localhost vs GitHub Pages
-- `FIREBASE_CONFIG` for cloud sync
-- `APP_CONFIG.openRouter` for AI models
-- Feature flags for debugging
-
-**Module Loading Order** (from app-init.js):
-validation-utils → event-registry → llm-service → firestore → task-data-service → schedule-data-service → task-index-manager → app-state → base-manager → managers (settings, date-navigation, ui, schedule, task) → app-controller → (secondary modules loaded later: ui-components, pattern-analyzer)
-
-**Critical Dependencies**:
-- All tasks managed exclusively through web UI (Firestore)
-- Service worker (`sw.js`) enables offline functionality
-- No build process - direct static file serving
+- **Firestore paths**: `users/default-user/[tasks|schedules|settings]`
+- **Module loading**: Defined in app-init.js (order matters!)
+- **Performance**: Lazy loading, DOM diffing, indexed search
+- **Capacity**: 8-hour workday, tasks roll over if incomplete
 
 ---
 
-# IMPLEMENTATION STATUS
+## 🔍 ARCHITECTURAL CONSIDERATIONS
 
-## ✅ Completed Features
+### Before Making ANY Change
+Always perform a **System-Wide Impact Analysis**:
 
-### Phase 2: Task Management
-- Full CRUD operations via web interface
-- Natural language date parsing
-- Real-time Firestore sync
-- Mobile-responsive design
+1. **Ask These Questions First**:
+   - Will this change affect other components?
+   - Which managers/services depend on this functionality?
+   - Does this maintain our simplicity principle?
+   - Will this break existing event flows?
+   - Is there a simpler solution that fits the existing architecture?
 
-### Phase 3: Multi-Date System
-- Date navigation with keyboard shortcuts
-- Calendar view (CSS Grid)
-- Pattern analysis & insights dashboard
-- Task rollover for incomplete items
-- Multi-day context for AI scheduling
-- Workload balancing (8-hour capacity)
-- Past date protection (no retroactive schedules)
-
-### Performance Optimizations (All Complete ✅)
-- **DOM Diffing**: 30-60% faster rendering
-- **Lazy Loading**: Initial load reduced 86% (45KB vs 331KB)
-- **Firestore Pagination**: Queries limited to 50 items with cursor pagination
-- **Event Listener Cleanup**: Zero memory leaks from orphaned listeners
-- **Task Filtering**: O(1) indexed lookups, 10,000+ tasks filter in <10ms
-
----
-
-# KNOWN ISSUES & TECHNICAL DEBT
-
-## Current Issues
-
-### 1. Task Duplication Prevention (Low Priority)
-- **Status**: Functional but could be enhanced
-- **Current Implementation**:
-  - Migration lock prevents concurrent migrations
-  - Duplicate checking on task creation
-  - Manual cleanup available in settings
-  - Console commands: `app.manualDeduplication()`
-- **Potential Enhancement**: Automatic deduplication during sync
-
-## Recently Completed Fixes
-
-### 1. Property Name Inconsistency ✅ (Fixed 2025-06-22)
-- **Issue**: TaskParser used `text` while LLMService used `task` for descriptions
-- **Fix**: Standardized all task descriptions to use `text` property
-- **Impact**: Removed 6 workaround checks across the codebase
-
-### 2. Bug Fixes ✅
-- Fixed PatternAnalyzer infinite recursion
-- Fixed Firestore path segments (3 max limit)
-- Fixed PerformanceMonitor method name
-- Added past date schedule prevention
-
-### 3. Performance Optimizations ✅
-- **Task Filtering with Indexes** (2025-06-21)
-  - Created TaskIndexManager for O(1) lookups
-  - Added search debouncing (300ms)
-  - Result caching for unchanged filters
-  - Scales to 10,000+ tasks efficiently
-
----
-
-# DEVELOPMENT GUIDE
-
-## Commands
-```bash
-npm run start      # Python dev server
-npm run serve      # Node.js dev server (no cache)
-npm run validate   # Check JS syntax
-npm run test       # Basic PWA test
-```
-
-## Common Tasks
-
-**Add Task Category**: 
-- Modify TaskParser section patterns
-- Add corresponding CSS classes
-
-**Update AI Models**: 
-- Edit `APP_CONFIG.openRouter.models` in config.js
-
-**Modify Sync**: 
-- Update StorageService for sync strategies
-
-**UI Changes**: 
-- Main rendering in `updateScheduleDisplay()` and `updateTaskManagementDisplay()`
-
-**Filter Changes**:
-- Must call `handleFilterChange()` to reset pagination
-
-## Deployment
-
-### GitHub Pages
-Auto-detects paths, no config needed - just enable in repository settings.
-
-### Firebase Setup & Security
-
-**⚠️ CRITICAL SECURITY WARNING**: The default Firebase rules are COMPLETELY OPEN for testing. You MUST secure your database before production deployment.
-
-1. **Update Configuration**
-   - Edit `FIREBASE_CONFIG` in config.js with your project details
-
-2. **Secure Your Database** (Required for Production)
-   - Go to Firebase Console → Firestore Database → Rules
-   - Replace the test rules with proper authentication:
-   ```javascript
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId}/{document=**} {
-         // TODO: Implement proper authentication
-         // For now, the rules are OPEN for testing:
-         allow read, write: if true; // ⚠️ CHANGE THIS BEFORE PRODUCTION!
-         
-         // Example secure rules (requires auth implementation):
-         // allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
+2. **Component Dependency Map**:
+   ```
+   Component Changed → Affected Components
+   ├── AppState → ALL Managers (via events)
+   ├── TaskDataService → TaskManager, TaskIndexManager, ScheduleManager
+   ├── LLMService → ScheduleManager, SettingsManager
+   ├── FirestoreService → TaskDataService, ScheduleDataService, StorageService
+   └── Any Manager → UI updates, event flows
    ```
 
-3. **API Keys Management**
-   - Stored in localStorage only (never synced to cloud)
-   - Each device needs its own OpenRouter API key
-   - Regenerate at https://openrouter.ai/keys if compromised
+3. **Architecture Integrity Checklist**:
+   - [ ] Preserves modular service architecture
+   - [ ] Maintains loose coupling between managers
+   - [ ] Follows existing event-driven patterns
+   - [ ] Doesn't introduce unnecessary complexity
+   - [ ] Compatible with offline-first design
+   - [ ] Respects the no-build-process constraint
 
-### Production Deployment Checklist
-- [ ] Firebase security rules updated
-- [ ] API keys configured per device
-- [ ] Test offline functionality
-- [ ] Verify GitHub Pages base URL detection
-- [ ] Check PWA installation works
+4. **Change Impact Levels**:
+   - **LOW**: Isolated to single file, no API changes
+   - **MEDIUM**: Affects 2-3 components, minor API changes
+   - **HIGH**: Cascades through system, changes event flows
+   - **CRITICAL**: Alters core architecture patterns
+
+⚠️ **If impact is MEDIUM or higher, document the change thoroughly!**
 
 ---
 
-# FUTURE ROADMAP
+## 🛠️ WORKING WITH THIS CODEBASE
 
-## Phase 4: Pagination Optimizations (Optional)
+### Before Making Changes Checklist
+1. ⚠️ **ALWAYS** check BEHAVIOR_SPEC.md for expected behavior
+2. 🔍 **Review Architectural Considerations** section above
+3. Perform system-wide impact analysis
+4. Look for existing patterns in similar files
+5. Run `npm run validate` before committing
+6. Test offline functionality if touching sync code
+7. Document changes if impact is MEDIUM or higher
 
-### 1. Intelligent Prefetching
-- Use IntersectionObserver at 80% scroll
-- Background fetch next page
-- Separate prefetch cache
+### Common Development Tasks
 
-### 2. Performance Metrics
-- Track: `pagination-load-time`, `pagination-render-time`
-- Integrate with PerformanceMonitor
-- Create metrics dashboard
+**Add a task category**:
+```javascript
+// 1. Update task-parser.js section patterns
+// 2. Add CSS class in main.css
+// 3. Update BEHAVIOR_SPEC.md
+```
 
-### 3. Infinite Scroll Option
-- User preference toggle
-- Virtual scrolling for 1000+ items
-- Fallback to button if issues
+**Change AI models**:
+```javascript
+// Edit config.js:
+APP_CONFIG.openRouter.models = [...]
+```
 
-### 4. Dynamic Page Size
-- Adjust 20-200 based on performance
-- Consider device, network, memory
-- User override in settings
+**Debug sync issues**:
+```javascript
+// Console commands:
+app.taskDataService.getAllTasks()
+app.storageService.performSync()
+```
 
-## Next Major Features
+**Test schedule generation**:
+```javascript
+// Force new schedule:
+app.scheduleManager.generateSchedule(true)
+```
 
-### Enhanced AI Integration
-- Deeper multi-day context usage
-- AI-suggested task redistribution
-- Learning from user feedback
-- Natural language commands
+### File Modification Guidelines
+- **UI changes**: Look in `updateScheduleDisplay()` and `updateTaskManagementDisplay()`
+- **Filter/search**: Must call `handleFilterChange()` to reset pagination
+- **Task operations**: Always go through TaskDataService
+- **Date changes**: Use DateNavigationManager methods
 
-### Advanced Planning
-- Project task breakdown
-- Recurring task templates
-- Goal tracking
-- Time blocking
+---
 
-### Personal Secretary Features
-- Conversational interface
-- Proactive suggestions
-- Weekly reviews
-- Context-aware reminders
+## ⚠️ ACTIVE ISSUES
 
-## Success Metrics
+### Task Duplication (Low Priority)
+- **Current state**: Functional with manual cleanup available
+- **Workaround**: Run `app.manualDeduplication()` if needed
+- **Future**: May add automatic deduplication
+
+### Firebase Security (HIGH PRIORITY for production)
+- **Current**: Rules are OPEN for testing
+- **Action needed**: Update Firestore rules before any public deployment
+- **Location**: Firebase Console → Firestore → Rules
+
+---
+
+## 🚀 DEPLOYMENT & SECURITY
+
+### ⚠️ CRITICAL: Secure Firebase Before Production
+```javascript
+// Current rules (TESTING ONLY):
+allow read, write: if true;  // CHANGE THIS!
+
+// Production rules (example):
+allow read, write: if request.auth != null && request.auth.uid == userId;
+```
+
+### Deployment Steps
+1. **GitHub Pages**: Just enable in repository settings
+2. **Firebase**: Update `FIREBASE_CONFIG` in config.js
+3. **API Keys**: Each device needs its own OpenRouter key
+4. **Test**: Verify offline mode and PWA installation
+
+---
+
+## 🔮 PLANNED FEATURES
+
+### Next Up
+1. **Natural language commands** - "Schedule all urgent tasks for tomorrow"
+2. **Weekly reviews** - Automated productivity insights
+3. **Project templates** - Break down large projects automatically
+
+### Success Metrics
+- Schedule generation < 3 seconds
 - Task operations < 30 seconds
-- Schedule load < 3 seconds
-- Sync < 5 seconds
-- 50% reduction in planning time
+- 50% reduction in daily planning time
 
 ---
 
-## Important Reminders
-- Stability matters - this is a daily-use app
-- Every line should provide user value
-- Enhance rather than rebuild
-- Document complexity choices
-- Test on real devices, not just responsive mode
+## 📝 NOTES
+
+- **Documentation**: Update BEHAVIOR_SPEC.md for behavior changes, README.md for user-facing changes
+- **Performance**: Already optimized for 10,000+ tasks with O(1) filtering
+- **Mobile**: Fully responsive but always test on actual devices
+- **Offline**: Everything except AI scheduling works offline
+
+Remember: This is a personal productivity tool in active daily use. Stability and simplicity matter more than features.

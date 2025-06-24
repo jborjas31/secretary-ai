@@ -135,9 +135,11 @@ npm run start
 ## Contributing
 
 1. Identify testing gaps
-2. Create new test files following naming patterns
-3. Document tests clearly
-4. Update this README
-5. Ensure cross-browser compatibility
+2. Review [Architectural Considerations](../CLAUDE.md#-architectural-considerations) before creating tests
+3. Create new test files following naming patterns
+4. Ensure tests don't cascade side effects through the system
+5. Document tests clearly
+6. Update this README
+7. Ensure cross-browser compatibility
 
 For issues: [GitHub Issues](../../issues)
