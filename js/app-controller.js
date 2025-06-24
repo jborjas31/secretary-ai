@@ -624,6 +624,55 @@ class AppController extends ComponentWithListeners {
     }
     
     /**
+     * Ensure calendar view is loaded and initialized
+     */
+    async ensureCalendarView() {
+        if (!this.components.calendarView) {
+            // Load the CalendarView class if not already loaded
+            const CalendarView = await window.loadCalendarView();
+            
+            // Create calendar instance with proper event handlers
+            this.components.calendarView = new CalendarView({
+                currentDate: this.state.currentDate,
+                onDateSelect: (date) => this.handleCalendarDateSelect(date),
+                onClose: () => this.handleCalendarClose(),
+                onLoadIndicators: (startDate, endDate) => 
+                    this.dateNavigationManager.loadScheduleIndicators(startDate, endDate)
+            });
+            
+            // Render and insert into DOM
+            const calendarElement = this.components.calendarView.render();
+            document.body.appendChild(calendarElement);
+        }
+    }
+    
+    /**
+     * Ensure insights modal is loaded and initialized
+     */
+    async ensureInsightsModal() {
+        if (!this.components.insightsModal) {
+            // Load the InsightsModal class if not already loaded
+            const InsightsModal = await window.loadInsightsModal();
+            
+            // Initialize pattern analyzer if needed
+            if (!this.patternAnalyzer) {
+                this.patternAnalyzer = new PatternAnalyzer();
+            }
+            
+            // Create insights modal instance
+            this.components.insightsModal = new InsightsModal({
+                patternAnalyzer: this.patternAnalyzer,
+                taskDataService: this.taskDataService,
+                scheduleDataService: this.scheduleDataService
+            });
+            
+            // Render and insert into DOM
+            const modalElement = this.components.insightsModal.render();
+            document.body.appendChild(modalElement);
+        }
+    }
+    
+    /**
      * Handle calendar date selection
      */
     async handleCalendarDateSelect(date) {
