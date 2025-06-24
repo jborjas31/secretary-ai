@@ -20,6 +20,10 @@ class StorageService {
 
     /**
      * Get data from local storage
+     * @param {string} key - Storage key to retrieve
+     * @returns {*} Parsed data from storage or null if not found/error
+     * @example
+     * const settings = getLocal('user-settings');
      */
     getLocal(key) {
         try {
@@ -33,6 +37,11 @@ class StorageService {
 
     /**
      * Save data to local storage
+     * @param {string} key - Storage key to save under
+     * @param {*} data - Data to store (will be JSON stringified)
+     * @returns {boolean} True if saved successfully, false on error
+     * @example
+     * setLocal('user-settings', { theme: 'dark', refreshInterval: 30 });
      */
     setLocal(key, data) {
         try {
@@ -59,6 +68,15 @@ class StorageService {
 
     /**
      * Save schedule with automatic sync
+     * @param {Date|string} date - Date object or date string (YYYY-MM-DD format)
+     * @param {Object} scheduleData - Schedule data to save
+     * @param {Array} scheduleData.schedule - Array of task items
+     * @param {string} scheduleData.summary - Schedule summary
+     * @param {string} scheduleData.generatedAt - ISO timestamp of generation
+     * @returns {Promise<Object>} Saved schedule data
+     * @throws {Error} If local storage fails (Firestore errors are handled gracefully)
+     * @example
+     * await saveSchedule(new Date(), { schedule: [...], summary: "Daily tasks" });
      */
     async saveSchedule(date, scheduleData) {
         const dateKey = typeof date === 'string' ? date : date.toISOString().split('T')[0];
@@ -95,6 +113,16 @@ class StorageService {
 
     /**
      * Load schedule with fallback logic
+     * @param {Date|string} date - Date object or date string (YYYY-MM-DD format)
+     * @returns {Promise<Object|null>} Schedule data if found, null otherwise
+     * @returns {Array} returns.schedule - Array of scheduled tasks
+     * @returns {string} returns.summary - Schedule summary
+     * @returns {string} returns.generatedAt - ISO timestamp when generated
+     * @example
+     * const todaySchedule = await loadSchedule(new Date());
+     * if (todaySchedule) {
+     *   console.log(`${todaySchedule.schedule.length} tasks scheduled`);
+     * }
      */
     async loadSchedule(date) {
         const dateKey = typeof date === 'string' ? date : date.toISOString().split('T')[0];

@@ -7,10 +7,10 @@ class FirestoreService {
     constructor() {
         this.db = null;
         this.initialized = false;
-        this.userId = 'default-user'; // Fixed user ID for single-user app
+        this.userId = APP_CONFIG.defaults.defaultUserId; // User ID from config
         this.config = null;
-        this.retryAttempts = 3;
-        this.retryDelay = 1000;
+        this.retryAttempts = APP_CONFIG.storage.syncRetryAttempts;
+        this.retryDelay = APP_CONFIG.storage.syncRetryDelay;
     }
 
     /**

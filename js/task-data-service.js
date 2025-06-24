@@ -46,6 +46,18 @@ class TaskDataService {
 
     /**
      * Create task data structure from raw input
+     * @param {string|Object} taskInput - Task text or task object with properties
+     * @param {string} [taskInput.text] - Task description text
+     * @param {string} [taskInput.section] - Task section (e.g., 'todayTasks', 'undatedTasks')
+     * @param {string} [taskInput.priority] - Task priority ('high', 'medium', 'low')
+     * @param {string} [taskInput.date] - Task date in ISO format
+     * @param {boolean} [taskInput.completed] - Whether task is completed
+     * @returns {Object} Complete task data structure with all required fields
+     * @example
+     * // Create from string
+     * createTaskData("Buy groceries")
+     * // Create from object
+     * createTaskData({ text: "Buy groceries", priority: "high", section: "todayTasks" })
      */
     createTaskData(taskInput) {
         const now = new Date().toISOString();
@@ -74,6 +86,12 @@ class TaskDataService {
 
     /**
      * Create a new task
+     * @param {string|Object} taskInput - Task text or task object to create
+     * @returns {Promise<Object>} Created task object with generated ID and timestamps
+     * @throws {Error} If task creation fails or Firestore is unavailable
+     * @example
+     * const task = await createTask("Review pull requests");
+     * const task = await createTask({ text: "Deploy to production", priority: "high" });
      */
     async createTask(taskInput) {
         if (!this.isAvailable()) {
@@ -622,6 +640,14 @@ class TaskDataService {
     /**
      * Remove duplicate tasks from Firestore
      * Keeps the oldest task (by createdAt) when duplicates are found
+     * @returns {Promise<Object>} Result object with success status and statistics
+     * @returns {boolean} returns.success - Whether deduplication completed successfully
+     * @returns {number} returns.duplicatesRemoved - Number of duplicate tasks removed
+     * @returns {number} returns.remainingTasks - Number of tasks after deduplication
+     * @returns {string} [returns.error] - Error message if deduplication failed
+     * @example
+     * const result = await deduplicateTasks();
+     * console.log(`Removed ${result.duplicatesRemoved} duplicates`);
      */
     async deduplicateTasks() {
         if (!this.isAvailable()) {

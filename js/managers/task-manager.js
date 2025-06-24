@@ -23,7 +23,7 @@ export class TaskManager extends BaseManager {
         
         // Pagination state
         this.taskPagination = {
-            pageSize: 50,
+            pageSize: APP_CONFIG.defaults.taskPageSize,
             lastDoc: null,
             hasMore: true,
             loading: false,

@@ -26,6 +26,17 @@ const APP_CONFIG = {
         maxScheduleHours: 12, // hours to schedule ahead
         maxTasks: 20, // maximum tasks to include in schedule
         cacheExpiry: 3600000, // 1 hour in milliseconds
+        
+        // User and authentication
+        defaultUserId: 'default-user',
+        
+        // Pagination and limits
+        taskPageSize: 50,
+        scheduleHistoryLimit: 30,
+        
+        // Date navigation
+        minNavigationDays: -30,  // Days in the past
+        maxNavigationDays: 30,   // Days in the future
     },
     
     // OpenRouter settings

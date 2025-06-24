@@ -229,7 +229,7 @@ class ScheduleDataService {
     async getScheduleHistory(startDate, endDate, options = {}) {
         const { 
             includeAnalytics = true, 
-            limit = 30, 
+            limit = APP_CONFIG.defaults.scheduleHistoryLimit, 
             startAfterDoc = null
         } = options;
         if (!this.isAvailable() || !this.firestoreService.isAvailable()) {

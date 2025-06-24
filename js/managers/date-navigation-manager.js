@@ -7,8 +7,8 @@ import { BaseManager } from '../base-manager.js';
 export class DateNavigationManager extends BaseManager {
     constructor(app) {
         super(app);
-        this.minNavigationDate = -30; // Days in the past
-        this.maxNavigationDate = 30;  // Days in the future
+        this.minNavigationDate = APP_CONFIG.defaults.minNavigationDays; // Days in the past
+        this.maxNavigationDate = APP_CONFIG.defaults.maxNavigationDays;  // Days in the future
     }
     
     /**
@@ -29,7 +29,6 @@ export class DateNavigationManager extends BaseManager {
         // Navigation buttons
         this.app.addEventListener(this.elements.prevDateBtn, 'click', () => this.navigateDate(-1));
         this.app.addEventListener(this.elements.nextDateBtn, 'click', () => this.navigateDate(1));
-        // this.app.addEventListener(this.elements.todayBtn, 'click', () => this.navigateToToday()); // This button does not exist in the HTML
         
         // Date picker
         this.app.addEventListener(this.elements.datePickerBtn, 'click', () => this.showDatePicker());
