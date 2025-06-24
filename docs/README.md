@@ -6,6 +6,7 @@ Technical documentation, API references, and development resources for Secretary
 
 ### Architecture & Development
 - **[CLAUDE.md](../CLAUDE.md)** - Complete technical overview, roadmap, and implementation details
+- **[TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md)** - Comprehensive technical debt tracking and priorities
 - **[optimizations/](optimizations/)** - Performance optimization documentation
   - [optimization-plan.md](optimizations/optimization-plan.md) - Complete optimization roadmap (All 5 critical issues resolved! ✅)
   - **Completed Optimizations:**
@@ -36,6 +37,7 @@ Technical documentation, API references, and development resources for Secretary
 |------|---------------|
 | Project setup | [Main README](../README.md) |
 | Architecture overview | [CLAUDE.md](../CLAUDE.md) |
+| Technical debt | [TECHNICAL_DEBT.md](../TECHNICAL_DEBT.md) |
 | API integration | [openrouter/quickstart.md](openrouter/quickstart.md) |
 | Testing | [Test suite](../tests/) |
 | Development | [CLAUDE.md](../CLAUDE.md#development-guide) |

@@ -179,15 +179,18 @@ app.scheduleManager.generateSchedule(true)
 
 ## ⚠️ ACTIVE ISSUES
 
-### Task Duplication (Low Priority)
-- **Current state**: Functional with manual cleanup available
-- **Workaround**: Run `app.manualDeduplication()` if needed
-- **Future**: May add automatic deduplication
+See [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) for comprehensive technical debt tracking.
 
-### Firebase Security (HIGH PRIORITY for production)
+### Quick Reference - Critical Items
+
+#### Firebase Security (🔴 CRITICAL for production)
 - **Current**: Rules are OPEN for testing
 - **Action needed**: Update Firestore rules before any public deployment
 - **Location**: Firebase Console → Firestore → Rules
+
+#### Task Duplication (🟢 Low Priority)
+- **Current state**: Functional with manual cleanup available
+- **Workaround**: Run `app.manualDeduplication()` if needed
 
 ---
 
